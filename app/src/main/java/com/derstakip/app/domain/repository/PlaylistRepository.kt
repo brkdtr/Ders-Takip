@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface PlaylistRepository {
     suspend fun importPlaylist(urlOrId: String): Result<Playlist>
+    suspend fun importSampleCourse(): Result<Playlist>
     fun getAllPlaylists(): Flow<List<Playlist>>
     fun getPlaylistById(playlistId: String): Flow<Playlist?>
     fun getActivePlaylist(): Flow<Playlist?>

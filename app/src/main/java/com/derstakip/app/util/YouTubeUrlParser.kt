@@ -6,38 +6,41 @@ import java.util.regex.Pattern
 object YouTubeUrlParser {
 
     private val PLAYLIST_URL_PATTERN = Pattern.compile(
-        "(?:https?://)?(?:www\\.|m\\.)?(?:youtube\\.com/(?:playlist\\?|watch\\?.*?[&?])|youtu\\.be/.*?\\?)list=([a-zA-Z0-9_-]+)",
+        "(?:https?://)?(?:[a-zA-Z0-9-]+\\.)?youtu(?:be\\.com|\\.be)/.*?[?&]list=([a-zA-Z0-9_-]+)",
         Pattern.CASE_INSENSITIVE
     )
 
     private val DIRECT_ID_PATTERN = Pattern.compile("^[a-zA-Z0-9_-]{10,40}$")
 
     /**
-     * Extracts YouTube Playlist ID from a URL or raw ID string.
+     * Extracts YouTube Playlist ID from any link, message, or raw ID string.
      * Supported formats:
      * - https://www.youtube.com/playlist?list=PL123456789
+     * - https://www.youtube.com/playlist?si=xyz&list=PL123456789
      * - https://youtube.com/playlist?list=PL123456789
      * - https://m.youtube.com/playlist?list=PL123456789
      * - https://www.youtube.com/watch?v=abcd&list=PL123456789
-     * - https://youtu.be/abcd?list=PL123456789
-     * - Direct ID: PL123456789
+     * - https://youtu.be/abcd?si=xyz&list=PL123456789
+     * - Raw ID: PL123456789
+     * - Shared text containing a link: "Dersler: https://youtube.com/playlist?list=PL123..."
      */
     fun extractPlaylistId(input: String?): String? {
         if (input.isNullOrBlank()) return null
 
         val trimmed = input.trim()
 
+        // 1. Regex search for any YouTube URL with list parameter
         val matcher = PLAYLIST_URL_PATTERN.matcher(trimmed)
         if (matcher.find()) {
             return matcher.group(1)
         }
 
-        // Direct ID match
+        // 2. Direct ID match (e.g. PLrSOXSkVQ87GE4uEwcvLp1m0f5hU_g56a)
         if (DIRECT_ID_PATTERN.matcher(trimmed).matches()) {
             return trimmed
         }
 
-        // Try extracting query param directly if URL parsing helps
+        // 3. Fallback query parameter parsing
         try {
             val queryStart = trimmed.indexOf('?')
             if (queryStart != -1 && queryStart < trimmed.length - 1) {

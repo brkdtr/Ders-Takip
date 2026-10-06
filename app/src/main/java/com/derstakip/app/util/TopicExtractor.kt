@@ -7,13 +7,13 @@ object TopicExtractor {
 
     // Pre-defined category keywords commonly used in English language courses
     private val TOPIC_RULES = listOf(
+        listOf("yds", "yökdil", "eyds", "toefl", "ielts", "yks dil", "soru çözümü", "deneme", "test") to "Sınav Hazırlığı",
         listOf("gramer", "grammar", "tenses", "present simple", "past simple", "continuous", "perfect", "passive", "modal", "conditional", "clause", "preposition", "adjective", "adverb") to "Gramer (Grammar)",
         listOf("kelime", "vocabulary", "idiom", "phrasal verb", "words", "collocation", "synonym") to "Kelime Bilgisi (Vocabulary)",
         listOf("dinleme", "listening", "podcast", "comprehension", "audio") to "Dinleme (Listening)",
         listOf("konuşma", "speaking", "pronunciation", "telaffuz", "fluency", "dialogue", "conversation") to "Konuşma & Telaffuz",
         listOf("okuma", "reading", "paragraf", "çeviri", "translation", "article") to "Okuma & Çeviri (Reading)",
         listOf("yazma", "writing", "essay", "paragraph writing", "composition") to "Yazma (Writing)",
-        listOf("yds", "yökdil", "eyds", "toefl", "ielts", "yks dil", "soru çözümü", "deneme", "test") to "Sınav Hazırlığı",
         listOf("başlangıç", "beginner", "a1", "a2", "temel", "alfabe", "giriş") to "Temel Seviye (A1-A2)",
         listOf("orta seviye", "intermediate", "b1", "b2") to "Orta Seviye (B1-B2)",
         listOf("ileri seviye", "advanced", "c1", "c2") to "İleri Seviye (C1-C2)"

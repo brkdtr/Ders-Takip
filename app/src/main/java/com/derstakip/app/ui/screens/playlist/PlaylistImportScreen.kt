@@ -180,9 +180,7 @@ fun PlaylistImportScreen(
 
                             OutlinedButton(
                                 onClick = {
-                                    val sampleUrl = "https://www.youtube.com/playlist?list=PLingilizce_kursu_ornek"
-                                    viewModel.onUrlChanged(sampleUrl)
-                                    viewModel.importPlaylist(sampleUrl)
+                                    viewModel.loadSampleCourse()
                                 },
                                 shape = RoundedCornerShape(12.dp),
                                 enabled = !uiState.isLoading
@@ -190,6 +188,35 @@ fun PlaylistImportScreen(
                                 Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = IndigoPrimary)
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text("Örnek Yükle", color = IndigoPrimary)
+                            }
+                        }
+
+                        // Inline Error Banner if import fails
+                        if (!uiState.errorMessage.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                color = RoseError.copy(alpha = 0.12f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Hata",
+                                        tint = RoseError,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = uiState.errorMessage ?: "",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = RoseError,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             }
                         }
                     }

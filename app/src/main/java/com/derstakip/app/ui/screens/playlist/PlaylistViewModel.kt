@@ -99,6 +99,26 @@ class PlaylistViewModel @Inject constructor(
         }
     }
 
+    fun loadSampleCourse() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null, userMessage = null)
+            val result = playlistRepository.importSampleCourse()
+            if (result.isSuccess) {
+                val playlist = result.getOrThrow()
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    urlInput = "",
+                    userMessage = "\"${playlist.title}\" başarıyla yüklendi!"
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = result.exceptionOrNull()?.message ?: "Örnek kurs yüklenemedi."
+                )
+            }
+        }
+    }
+
     fun deletePlaylist(playlistId: String) {
         viewModelScope.launch {
             playlistRepository.deletePlaylist(playlistId)

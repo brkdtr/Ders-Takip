@@ -1,8 +1,8 @@
 package com.derstakip.app.data.remote
 
+import com.derstakip.app.data.remote.dto.PlaylistListResponse
 import com.derstakip.app.data.remote.dto.PlaylistItemListResponse
 import com.derstakip.app.data.remote.dto.VideoListResponse
-import com.derstakip.app.data.remote.dto.YouTubePlaylistResponse
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -17,7 +17,7 @@ interface YouTubeApiService {
         @Query("part") part: String = "snippet,contentDetails",
         @Query("id") playlistId: String,
         @Query("key") apiKey: String
-    ): YouTubePlaylistResponse
+    ): PlaylistListResponse
 
     @GET("playlistItems")
     suspend fun getPlaylistItems(

@@ -39,6 +39,18 @@ class YouTubeUrlParserTest {
             YouTubeUrlParser.extractPlaylistId("https://youtu.be/dQw4w9WgXcQ?list=PL1234567890abcdef")
         )
 
+        // URL with si tracking parameter
+        assertEquals(
+            "PL1234567890abcdef",
+            YouTubeUrlParser.extractPlaylistId("https://www.youtube.com/playlist?si=track123&list=PL1234567890abcdef")
+        )
+
+        // Shared message containing a link
+        assertEquals(
+            "PL1234567890abcdef",
+            YouTubeUrlParser.extractPlaylistId("Harika dersler burada: https://youtube.com/playlist?list=PL1234567890abcdef izlemelisin")
+        )
+
         // Direct playlist ID
         assertEquals(
             "PL1234567890abcdef",
