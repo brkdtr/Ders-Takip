@@ -1,116 +1,58 @@
-# Ders Takip ve Akıllı Çalışma Programı Sistemi 🎓📱
+# Ders Takip ve Akıllı Çalışma Programı (PWA) 🎓📱⚡
 
-İngilizce öğretmenleri ve öğrencileri için YouTube oynatma listelerine (playlist) dayalı, akıllı ve modern bir **Ders Takip ve Akıllı Çalışma Programı** Android uygulaması.
+İngilizce öğretmenleri ve öğrencileri için YouTube oynatma listelerine dayalı, akıllı ve modern bir **Ders Takip ve Akıllı Çalışma Programı Progressive Web App (PWA)**.
 
----
-
-## 🏗️ Mimari ve Teknoloji Yığını
-
-Uygulama, Google tarafından önerilen **Modern Android Architecture (Clean Architecture + MVVM)** prensiplerine tam uyumlu olarak geliştirilmiştir:
-
-- **Dil:** Kotlin (100% Idiomatic Kotlin, Coroutines & Flow)
-- **Arayüz (UI):** Jetpack Compose, Material Design 3
-- **Mimari:** MVVM (Model-View-ViewModel) + Clean Architecture (Data, Domain, UI katmanları)
-- **Yerel Depolama:** AndroidX Room Database 2.6+ (Entities, DAOs, Relations, TypeConverters)
-- **Bağımlılık Enjeksiyonu (DI):** Dagger Hilt 2.51+
-- **Ağ/API:** Retrofit 2.11+ & OkHttp (YouTube Data API v3)
-- **Asenkron Yapı:** Kotlin Coroutines & Reactive StateFlow
-- **Test:** JUnit 4 & Kotlinx Coroutines Test
-- **Minimum SDK:** 24 (Android 7.0+) | **Hedef SDK:** 34 (Android 14)
+Herhangi bir derleyiciye, Android Studio kurulumuna veya APK dosyasına gerek olmadan; doğrudan tarayıcıda çalışır, iPhone (Safari) ve Android (Chrome) cihazlarda **"Ana Ekrana Ekle"** ile yerel bir mobil uygulama gibi kurulabilir.
 
 ---
 
-## 🌟 Temel Özellikler
+## 🌟 Öne Çıkan Özellikler
 
-### 1. YouTube Oynatma Listesi Entegrasyonu ve Veri Çekme
-- Kullanıcı geçerli bir YouTube playlist URL'si veya Playlist ID'si girebilir.
-- `YouTubeUrlParser` ile farklı YouTube link formatları (web, mobil, paylaşılan linkler) otomatik ayıklanır.
-- `YouTubeApiService` üzerinden oynatma listesi detayları, video listesi ve video süreleri (ISO 8601: `PT15M33S` vb.) çekilir.
-- `IsoDurationParser` süreleri saniye ve Türkçe kullanıcı dostu biçime ("1 sa 25 dk", "45 dk") çevirir.
-- `TopicExtractor` video başlıklarındaki pedagojik anahtar kelimeleri analiz ederek ilgili konuyu otomatik sınıflandırır (örneğin *Gramer*, *Kelime Bilgisi*, *Dinleme*, *Konuşma & Telaffuz*, *Okuma & Çeviri*, *Sınav Hazırlığı*).
-- API anahtarının girilmediği veya internetin olmadığı durumlarda kullanıcıyı engellememek adına zengin çevrimdışı örnek ders kütüphanesi devreye girer.
+1. **Çevrimdışı ve Yerel Depolama (LocalStorage):**
+   - Tüm oynatma listeleri, video dersler, tamamlanma durumları ve oluşturulan akıllı takvim tarayıcının `localStorage` alanında kalıcı olarak saklanır. Sayfa yenilense de veriler kaybolmaz.
 
-### 2. Akıllı Programlama Motoru (Smart Scheduling Engine)
-- **Günlük Kapasite:** Kullanıcı günde kaç dakika (örneğin 120 dakika) çalışabileceğini belirler.
-- **Haftalık Çalışma Günleri:** Pazartesi'den Pazar'a kadar hangi günlerde çalışılacağı seçilebilir (örneğin sadece Pazartesi, Çarşamba, Cuma).
-- **Video Bölünmeme Kuralı:** Tek bir video, süresi tüm günlük kapasiteyi tek başına aşmadığı sürece asla günlere bölünmez. Günlük kapasite dolduğunda sonraki video bir sonraki çalışma gününe ertelenir.
-- **Konu Bütünlüğü:** Derslerin pedagojik ve mantıksal sırası korunur.
+2. **Akıllı Programlama Motoru (Smart Scheduling Engine):**
+   - Kullanıcının belirlediği **günlük çalışma kapasitesine** (örneğin 120 dk) ve **haftalık çalışma günlerine** (örneğin Pazartesi, Çarşamba, Cuma) göre videoları günlere böler.
+   - **Video Bölünmeme Kuralı:** Tek bir video (süresi günlük kapasiteyi aşmadıkça) asla günlere bölünmez. Konu bütünlüğü korunarak sepetlere dağıtılır.
 
-### 3. Kontrol Paneli ve İlerleme Takibi
-- **Bugün Ekranı (Daily View):**
-  - Bugünün çalışma hedefi, tamamlanan ders sayısı, kalan süre.
-  - Video bazlı anlık "Tamamlandı" onay kutuları (Checkbox).
-  - Günlük hedefler bittiğinde tebrik bildirimi.
-- **Program Ekranı (Schedule View):**
-  - Kapasite kaydırıcısı ve haftalık gün seçici.
-  - Tüm günlerin zaman çizelgesi kartları (açılır/kapanır video listeleriyle).
-- **İlerleme & İstatistikler Ekranı (Progress View):**
-  - Genel kurs tamamlama yüzdesi ve saat bazlı sayaçlar.
-  - Konu/Ders bazlı ilerleme çubukları (örneğin *"Gramer: 20 videodan 12'si tamamlandı, 5 saat kaldı"*).
+3. **4 Ana Ekran / Sekme:**
+   - **Bugün (Today):** Günlük hedef özeti, anlık onay kutuları (checkbox), kalan süre sayacı ve hedefler bittiğinde kutlama konfetisi 🎉.
+   - **Program (Schedule):** Kapasite kaydırıcısı, haftalık gün seçici ve açılır/kapanır akordeon gün kartları.
+   - **İlerleme (Progress):** Genel kurs tamamlama yüzdesi ve konu bazlı ilerleme çubukları (*Gramer, Kelime Bilgisi, Dinleme, Konuşma, Okuma, Sınav*).
+   - **Liste (Playlist):** YouTube linki yapıştırma, arama/filtreleme ve tek tıkla örnek İngilizce kursu yükleme.
+
+4. **PWA & Mobil Uygulama Deneyimi:**
+   - `manifest.json` ve `sw.js` (Service Worker) ile çevrimdışı çalışma ve anında açılma desteği.
+   - iOS çentik ve alt çubuk uyumlu safe-area desteği (`viewport-fit=cover`).
 
 ---
 
-## 📁 Dizin Yapısı
+## 📁 PWA Proje Dosyaları
 
-```
-app/src/main/java/com/derstakip/app/
-├── DersTakipApplication.kt          # @HiltAndroidApp uygulama sınıfı
-├── MainActivity.kt                  # Edge-to-edge Compose Activity
-│
-├── data/                            # Veri Katmanı
-│   ├── local/                       # Room Veritabanı
-│   │   ├── AppDatabase.kt
-│   │   ├── converter/Converters.kt
-│   │   ├── dao/                     # PlaylistDao, VideoDao, DailyScheduleDao, StudySettingsDao
-│   │   ├── entity/                  # PlaylistEntity, VideoEntity, DailyScheduleEntity...
-│   │   └── relation/                # DailyScheduleWithVideos, TopicStats
-│   ├── remote/                      # YouTube Data API
-│   │   ├── YouTubeApiService.kt
-│   │   └── dto/YouTubeDtos.kt
-│   └── repository/                  # PlaylistRepositoryImpl, ScheduleRepositoryImpl
-│
-├── domain/                          # İş Mantığı & Domain Katmanı
-│   ├── engine/                      # SmartSchedulingEngine (Akıllı Program Algoritması)
-│   ├── model/                       # Playlist, Video, DailySchedulePlan, TopicProgress...
-│   └── repository/                  # PlaylistRepository, ScheduleRepository (Arayüzler)
-│
-├── di/                              # Dependency Injection
-│   ├── DatabaseModule.kt
-│   ├── NetworkModule.kt
-│   └── RepositoryModule.kt
-│
-├── ui/                              # Sunum (UI) Katmanı
-│   ├── components/                  # VideoItemCard, TopicProgressBar, DailyTimelineCard, BottomBar
-│   ├── navigation/                  # Screen, AppNavigation
-│   ├── screens/
-│   │   ├── today/                   # TodayScreen, TodayViewModel
-│   │   ├── playlist/                # PlaylistImportScreen, PlaylistViewModel
-│   │   ├── schedule/                # ScheduleSettingsScreen, ScheduleViewModel
-│   │   └── progress/                # ProgressScreen, ProgressViewModel
-│   └── theme/                       # Color, Theme, Type (Material 3)
-│
-└── util/                            # Yardımcı Araçlar
-    ├── IsoDurationParser.kt         # ISO 8601 Süre Çözümleyici
-    ├── TopicExtractor.kt            # Başlıktan Konu Çıkarıcı
-    └── YouTubeUrlParser.kt          # YouTube Link Çözümleyici
-```
+- [`index.html`](file:///Users/burak/Desktop/Ders%20Takip%20Uygulamas%C4%B1/index.html): Uygulama iskeleti, 4 sekme, modal pencereleri ve Tailwind CSS tasarımı.
+- [`style.css`](file:///Users/burak/Desktop/Ders%20Takip%20Uygulamas%C4%B1/style.css): Mobil uygulama animasyonları, özel kaydırma çubukları ve safe-area stilleri.
+- [`app.js`](file:///Users/burak/Desktop/Ders%20Takip%20Uygulamas%C4%B1/app.js): LocalStorage servisi, YouTube API/veri çekicisi, Akıllı Zamanlama Motoru ve reaktif UI kontrolörü.
+- [`manifest.json`](file:///Users/burak/Desktop/Ders%20Takip%20Uygulamas%C4%B1/manifest.json): PWA web uygulama manifestosu.
+- [`sw.js`](file:///Users/burak/Desktop/Ders%20Takip%20Uygulamas%C4%B1/sw.js): Çevrimdışı önbellekleme Service Worker'ı.
+- `icons/`: PWA uygulama simgeleri (`icon.svg`, `icon-192.png`, `icon-512.png`).
 
 ---
 
-## 🧪 Birim Testleri (Unit Tests)
+## 🚀 GitHub Pages Üzerinde Yayına Alma (1 Dakikada)
 
-`app/src/test/java/com/derstakip/app/` altında kapsamlı test senaryoları mevcuttur:
-1. `SmartSchedulingEngineTest`: Günlük kapasite kontrolü, video bölünmeme kuralı, aktif gün filtreleme, büyük video davranışı.
-2. `IsoDurationParserTest`: ISO 8601 (`PT#H#M#S`) ayrıştırma ve Türkçe biçimlendirme doğrulaması.
-3. `YouTubeUrlParserTest`: Farklı YouTube playlist URL biçimlerinin doğru ayrıştırılması.
-4. `TopicExtractorTest`: İngilizce eğitim içerikleri için konu sınıflandırma kurallarının testi.
+Bu projeyi doğrudan internette canlıya almak için:
 
----
-
-## 🚀 Projeyi Çalıştırma
-
-1. **Android Studio**'yu açın.
-2. **File -> Open** menüsünden `Ders Takip Uygulaması` klasörünü seçin.
-3. Android Studio Gradle senkronizasyonunu tamamlayacaktır.
-4. Gerçek YouTube API anahtarınızı kullanmak isterseniz `app/build.gradle.kts` içerisindeki `YOUTUBE_API_KEY` alanına kendi anahtarınızı yazabilirsiniz. (Varsayılan olarak yerleşik örnek İngilizce kurs kütüphanesi anında çalışacak şekilde yapılandırılmıştır).
-5. Emülatör veya fiziksel Android cihaz seçerek **Run 'app'** butonuna basın.
+1. **GitHub'da Yeni Bir Depo (Repository) Oluşturun:**
+   - GitHub hesabınıza girip `ders-takip` adında boş bir repo açın.
+2. **Kodu GitHub'a Gönderin:**
+   ```bash
+   git remote add origin https://github.com/KULLANICI_ADINIZ/ders-takip.git
+   git branch -M main
+   git push -u origin main
+   ```
+3. **GitHub Pages'i Açın:**
+   - GitHub reponuzda **Settings (Ayarlar)** ➡️ **Pages** sekmesine gidin.
+   - **Branch** kısmından `main` ve `/ (root)` seçip **Save** deyin.
+4. **Hazır!**
+   - 1-2 dakika içinde `https://KULLANICI_ADINIZ.github.io/ders-takip/` adresinde uygulamanız canlıya geçer!
+   - Telefonunuzdan bu adresi açıp **"Ana Ekrana Ekle"** diyerek gerçek bir mobil uygulama gibi kullanabilirsiniz.
