@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Ders Takip</string>
+    <string name="title_playlist">Oynatma Listesi</string>
+    <string name="title_schedule">Çalışma Programı</string>
+    <string name="title_today">Bugün</string>
+    <string name="title_progress">İlerleme &amp; İstatistik</string>
+    <string name="enter_playlist_url">YouTube Oynatma Listesi Linki</string>
+    <string name="import_playlist">Listeyi İçe Aktar</string>
+    <string name="daily_capacity_minutes">Günlük Çalışma Süresi (Dakika)</string>
+    <string name="generate_schedule">Akıllı Program Oluştur</string>
+    <string name="completed">Tamamlandı</string>
+    <string name="mark_as_completed">Tamamlandı olarak işaretle</string>
+    <string name="total_duration">Toplam Süre</string>
+    <string name="remaining_duration">Kalan Süre</string>
+    <string name="videos_completed">%1$d / %2$d video tamamlandı</string>
+</resources>
