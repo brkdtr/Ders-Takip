@@ -1,10 +1,223 @@
 /**
  * Ders Takip - Progressive Web App (PWA)
  * JavaScript Core Application Architecture
+ * Features:
+ *  - 7 Independent Subjects: MEB-AGS (6 subjects) + YDS (English)
+ *  - AMOLED Pure Black (#000000) & Light Themes
+ *  - Phone & Tablet Layout Modes
+ *  - Smart Bin-Packing Scheduling Algorithm (No video split rule)
+ *  - Full LocalStorage persistence
+ *  - YouTube Data API v3 & Direct fallback scrapers
  */
 
 // ============================================================================
-// 1. STORAGE SERVICE (Room Database -> LocalStorage Migration)
+// 1. SUBJECT DEFINITIONS (MEB-AGS + YDS MÜFREDATI)
+// ============================================================================
+
+const SUBJECTS = [
+  {
+    id: 'egitim-bilimleri',
+    name: 'Eğitim Bilimleri & MEB Sistemi',
+    shortName: 'Eğitim Bilimleri',
+    icon: 'fa-chalkboard-user',
+    color: '#6366f1',
+    bgColor: 'rgba(99, 102, 241, 0.15)',
+    borderColor: 'rgba(99, 102, 241, 0.4)',
+    badge: 'AGS (%37.5)',
+    desc: 'Öğrenme & Gelişim Psikolojisi, ÖYT, Ölçme, Rehberlik ve MEB Teşkilat Yapısı'
+  },
+  {
+    id: 'turkce',
+    name: 'Sözel Yetenek (Türkçe)',
+    shortName: 'Türkçe',
+    icon: 'fa-book-open',
+    color: '#ec4899',
+    bgColor: 'rgba(236, 72, 153, 0.15)',
+    borderColor: 'rgba(236, 72, 153, 0.4)',
+    badge: 'AGS (%18.75)',
+    desc: 'Sözcükte/Cümlede Anlam, Paragraf Analizi, Dil Bilgisi ve Sözel Mantık'
+  },
+  {
+    id: 'matematik',
+    name: 'Sayısal Yetenek (Matematik)',
+    shortName: 'Matematik',
+    icon: 'fa-calculator',
+    color: '#3b82f6',
+    bgColor: 'rgba(59, 130, 246, 0.15)',
+    borderColor: 'rgba(59, 130, 246, 0.4)',
+    badge: 'AGS (%18.75)',
+    desc: 'Temel Matematik, Problemler, Sayısal Mantık, Tablo ve Grafik Yorumlama'
+  },
+  {
+    id: 'mevzuat',
+    name: 'Eğitim Mevzuatı & Hukuk',
+    shortName: 'Mevzuat',
+    icon: 'fa-scale-balanced',
+    color: '#f59e0b',
+    bgColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: 'rgba(245, 158, 11, 0.4)',
+    badge: 'AGS (%10)',
+    desc: 'Öğretmenlik Mesleği Kanunu (ÖMK), Anayasa, 1739 Sayılı Kanun, 657 DMK'
+  },
+  {
+    id: 'tarih',
+    name: 'Tarih',
+    shortName: 'Tarih',
+    icon: 'fa-landmark',
+    color: '#8b5cf6',
+    bgColor: 'rgba(139, 92, 246, 0.15)',
+    borderColor: 'rgba(139, 92, 246, 0.4)',
+    badge: 'AGS (%7.5)',
+    desc: 'İlk Türk Devletleri, Türk-İslam Tarihi, Osmanlı Tarihi ve İnkılap Tarihi'
+  },
+  {
+    id: 'cografya',
+    name: 'Türkiye Coğrafyası',
+    shortName: 'Coğrafya',
+    icon: 'fa-earth-europe',
+    color: '#10b981',
+    bgColor: 'rgba(16, 185, 129, 0.15)',
+    borderColor: 'rgba(16, 185, 129, 0.4)',
+    badge: 'AGS (%7.5)',
+    desc: 'Türkiye Fiziki Coğrafyası, İklim, Nüfus, Yerleşme, Tarım ve Madenler'
+  },
+  {
+    id: 'yds',
+    name: 'YDS (İngilizce)',
+    shortName: 'YDS İngilizce',
+    icon: 'fa-language',
+    color: '#06b6d4',
+    bgColor: 'rgba(6, 182, 212, 0.15)',
+    borderColor: 'rgba(6, 182, 212, 0.4)',
+    badge: 'YDS (Tek Ders)',
+    desc: 'Gramer, Kelime Bilgisi, Cümle Tamamlama, Çeviri, Okuma ve Deneme Taktikleri'
+  }
+];
+
+
+// ============================================================================
+// 2. THEME & LAYOUT MANAGERS
+// ============================================================================
+
+const ThemeManager = {
+  KEY: 'dt_theme',
+
+  init() {
+    const current = this.getTheme();
+    this.applyTheme(current);
+  },
+
+  getTheme() {
+    return localStorage.getItem(this.KEY) || 'amoled';
+  },
+
+  setTheme(theme) {
+    localStorage.setItem(this.KEY, theme);
+    this.applyTheme(theme);
+  },
+
+  applyTheme(theme) {
+    const html = document.documentElement;
+    html.classList.remove('theme-amoled', 'theme-light', 'dark');
+
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+
+    if (theme === 'light') {
+      html.classList.add('theme-light');
+      if (metaTheme) metaTheme.setAttribute('content', '#f8fafc');
+    } else {
+      // AMOLED Pure Black
+      html.classList.add('theme-amoled', 'dark');
+      if (metaTheme) metaTheme.setAttribute('content', '#000000');
+    }
+
+    // Update Quick Toggle Button Icon in Header
+    const toggleBtn = document.getElementById('quickThemeToggleBtn');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = theme === 'light'
+        ? '<i class="fa-solid fa-moon text-slate-700"></i>'
+        : '<i class="fa-solid fa-sun text-amber-400"></i>';
+      toggleBtn.title = theme === 'light' ? 'AMOLED Saf Siyaha Geç' : 'Gündüz Moduna Geç';
+    }
+
+    // Update Settings Radios / UI buttons
+    document.querySelectorAll('.theme-selector-btn').forEach(btn => {
+      const btnTheme = btn.getAttribute('data-theme');
+      if (btnTheme === theme) {
+        btn.classList.add('ring-2', 'ring-brand-500', 'bg-brand-500/10');
+      } else {
+        btn.classList.remove('ring-2', 'ring-brand-500', 'bg-brand-500/10');
+      }
+    });
+  },
+
+  toggle() {
+    const next = this.getTheme() === 'amoled' ? 'light' : 'amoled';
+    this.setTheme(next);
+    AppUI.showToast(next === 'amoled' ? 'AMOLED Saf Siyah Açıldı' : 'Gündüz Modu Açıldı', 'info');
+  }
+};
+
+const LayoutManager = {
+  KEY: 'dt_layout',
+
+  init() {
+    const current = this.getLayout();
+    this.applyLayout(current);
+  },
+
+  getLayout() {
+    const saved = localStorage.getItem(this.KEY);
+    if (saved) return saved;
+    // Default to tablet if large screen, else phone
+    return window.innerWidth >= 900 ? 'tablet' : 'phone';
+  },
+
+  setLayout(layout) {
+    localStorage.setItem(this.KEY, layout);
+    this.applyLayout(layout);
+  },
+
+  applyLayout(layout) {
+    const body = document.body;
+    body.classList.remove('view-phone', 'view-tablet');
+
+    if (layout === 'tablet') {
+      body.classList.add('view-tablet');
+    } else {
+      body.classList.add('view-phone');
+    }
+
+    // Update Quick Toggle Button Icon
+    const toggleBtn = document.getElementById('quickLayoutToggleBtn');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = layout === 'tablet'
+        ? '<i class="fa-solid fa-mobile-screen text-slate-300"></i>'
+        : '<i class="fa-solid fa-tablet-screen-button text-brand-400"></i>';
+      toggleBtn.title = layout === 'tablet' ? 'Telefon Moduna Geç' : 'Tablet Moduna Geç';
+    }
+
+    // Update Settings Layout buttons
+    document.querySelectorAll('.layout-selector-btn').forEach(btn => {
+      const btnLayout = btn.getAttribute('data-layout');
+      if (btnLayout === layout) {
+        btn.classList.add('ring-2', 'ring-brand-500', 'bg-brand-500/10');
+      } else {
+        btn.classList.remove('ring-2', 'ring-brand-500', 'bg-brand-500/10');
+      }
+    });
+  },
+
+  toggle() {
+    const next = this.getLayout() === 'tablet' ? 'phone' : 'tablet';
+    this.setLayout(next);
+    AppUI.showToast(next === 'tablet' ? 'Tablet Modu (Geniş Panel) Aktif' : 'Telefon Modu (Kompakt) Aktif', 'info');
+  }
+};
+
+
+// ============================================================================
+// 3. STORAGE SERVICE (Ders Bazlı Yerel Depolama)
 // ============================================================================
 
 const StorageService = {
@@ -20,15 +233,27 @@ const StorageService = {
     if (!raw) {
       return {
         dailyCapacityMinutes: 120,
-        selectedDays: [1, 2, 3, 4, 5], // 1 = Monday ... 7 = Sunday
+        selectedDays: [1, 2, 3, 4, 5], // 1 = Pzt ... 7 = Paz
         startDate: SmartSchedulingEngine.formatLocalDate(new Date()),
+        activeSubjectFilter: 'all',
         apiKey: ''
       };
     }
     try {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (!parsed.dailyCapacityMinutes) parsed.dailyCapacityMinutes = 120;
+      if (!parsed.selectedDays || parsed.selectedDays.length === 0) parsed.selectedDays = [1, 2, 3, 4, 5];
+      if (!parsed.startDate) parsed.startDate = SmartSchedulingEngine.formatLocalDate(new Date());
+      if (!parsed.activeSubjectFilter) parsed.activeSubjectFilter = 'all';
+      return parsed;
     } catch {
-      return { dailyCapacityMinutes: 120, selectedDays: [1, 2, 3, 4, 5], startDate: '', apiKey: '' };
+      return {
+        dailyCapacityMinutes: 120,
+        selectedDays: [1, 2, 3, 4, 5],
+        startDate: SmartSchedulingEngine.formatLocalDate(new Date()),
+        activeSubjectFilter: 'all',
+        apiKey: ''
+      };
     }
   },
 
@@ -45,50 +270,37 @@ const StorageService = {
     }
   },
 
-  getActivePlaylist() {
+  getPlaylistBySubject(subjectId) {
     const playlists = this.getPlaylists();
-    return playlists.find(p => p.isActive) || playlists[0] || null;
+    return playlists.find(p => p.subjectId === subjectId) || null;
   },
 
   savePlaylist(playlist) {
     let playlists = this.getPlaylists();
-    // Mark previous as non-active if this one is active
-    if (playlist.isActive) {
-      playlists = playlists.map(p => ({ ...p, isActive: false }));
-    }
-    const existingIndex = playlists.findIndex(p => p.id === playlist.id);
+    const existingIndex = playlists.findIndex(p => p.id === playlist.id || (playlist.subjectId && p.subjectId === playlist.subjectId));
     if (existingIndex >= 0) {
-      playlists[existingIndex] = playlist;
+      playlists[existingIndex] = { ...playlists[existingIndex], ...playlist };
     } else {
-      playlists.unshift(playlist);
+      playlists.push(playlist);
     }
     localStorage.setItem(this.KEYS.PLAYLISTS, JSON.stringify(playlists));
   },
 
-  setActivePlaylist(playlistId) {
-    let playlists = this.getPlaylists();
-    playlists = playlists.map(p => ({
-      ...p,
-      isActive: p.id === playlistId
-    }));
-    localStorage.setItem(this.KEYS.PLAYLISTS, JSON.stringify(playlists));
-  },
-
-  getVideos(playlistId) {
+  getVideos(subjectId = null) {
     const raw = localStorage.getItem(this.KEYS.VIDEOS);
     try {
       const all = raw ? JSON.parse(raw) : [];
-      if (!playlistId) return all;
-      return all.filter(v => v.playlistId === playlistId);
+      if (!subjectId || subjectId === 'all') return all;
+      return all.filter(v => v.subjectId === subjectId);
     } catch {
       return [];
     }
   },
 
-  saveVideos(playlistId, videos) {
+  saveVideos(subjectId, videos) {
     let all = this.getVideos();
-    // Remove old videos for this playlist
-    all = all.filter(v => v.playlistId !== playlistId);
+    // Remove existing videos for this subject
+    all = all.filter(v => v.subjectId !== subjectId);
     all.push(...videos);
     localStorage.setItem(this.KEYS.VIDEOS, JSON.stringify(all));
   },
@@ -103,22 +315,17 @@ const StorageService = {
     }
   },
 
-  getSchedules(playlistId) {
+  getSchedules() {
     const raw = localStorage.getItem(this.KEYS.SCHEDULES);
     try {
-      const all = raw ? JSON.parse(raw) : [];
-      if (!playlistId) return all;
-      return all.filter(s => s.playlistId === playlistId);
+      return raw ? JSON.parse(raw) : [];
     } catch {
       return [];
     }
   },
 
-  saveSchedules(playlistId, schedules) {
-    let all = this.getSchedules();
-    all = all.filter(s => s.playlistId !== playlistId);
-    all.push(...schedules);
-    localStorage.setItem(this.KEYS.SCHEDULES, JSON.stringify(all));
+  saveSchedules(schedules) {
+    localStorage.setItem(this.KEYS.SCHEDULES, JSON.stringify(schedules));
   },
 
   resetAll() {
@@ -130,7 +337,7 @@ const StorageService = {
 
 
 // ============================================================================
-// 2. YOUTUBE SERVICE & UTILITIES (URL, DURATION & TOPIC EXTRACTOR)
+// 4. YOUTUBE SERVICE & AGS/YDS SAMPLE DATA GENERATOR
 // ============================================================================
 
 const YouTubeService = {
@@ -148,7 +355,7 @@ const YouTubeService = {
   },
 
   extractPlaylistId(input) {
-    if (!input || typeof input !== 'string') return null;
+    if (!input) return null;
     const trimmed = input.trim();
     const match = trimmed.match(this.PLAYLIST_REGEX);
     if (match && match[1]) return match[1];
@@ -156,204 +363,141 @@ const YouTubeService = {
     return null;
   },
 
-  parseIsoDuration(iso) {
-    if (!iso || typeof iso !== 'string') return 0;
-    const match = iso.trim().match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/);
+  parseIso8601Duration(durationStr) {
+    if (!durationStr) return 0;
+    const match = durationStr.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
     if (!match) return 0;
-    const days = parseInt(match[1] || '0', 10);
-    const hours = parseInt(match[2] || '0', 10);
-    const minutes = parseInt(match[3] || '0', 10);
-    const seconds = parseInt(match[4] || '0', 10);
-    return (days * 86400) + (hours * 3600) + (minutes * 60) + seconds;
+    const hours = parseInt(match[1] || '0', 10);
+    const minutes = parseInt(match[2] || '0', 10);
+    const seconds = parseInt(match[3] || '0', 10);
+    return (hours * 3600) + (minutes * 60) + seconds;
   },
 
   formatDuration(seconds) {
     if (!seconds || seconds <= 0) return '0 dk';
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-
-    if (h > 0 && m > 0) return `${h} sa ${m} dk`;
-    if (h > 0) return `${h} sa`;
-    if (m > 0 && s > 0) return `${m} dk ${s} sn`;
-    if (m > 0) return `${m} dk`;
-    return `${s} sn`;
-  },
-
-  formatMinutes(minutes) {
-    if (!minutes || minutes <= 0) return '0 dk';
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    if (h > 0 && m > 0) return `${h} sa ${m} dk`;
-    if (h > 0) return `${h} sa`;
+    if (h > 0) {
+      return m > 0 ? `${h} sa ${m} dk` : `${h} sa`;
+    }
     return `${m} dk`;
   },
 
-  extractTopic(videoTitle, playlistTitle) {
-    if (!videoTitle) return playlistTitle || 'Genel Dersler';
-    const lower = videoTitle.toLowerCase();
-
-    const rules = [
-      [['gramer', 'grammar', 'tenses', 'present', 'past', 'continuous', 'perfect', 'passive', 'modal', 'conditional', 'preposition'], 'Gramer (Grammar)'],
-      [['kelime', 'vocabulary', 'idiom', 'phrasal verb', 'words', 'collocation'], 'Kelime Bilgisi (Vocabulary)'],
-      [['dinleme', 'listening', 'podcast', 'comprehension', 'audio'], 'Dinleme (Listening)'],
-      [['konuşma', 'speaking', 'pronunciation', 'telaffuz', 'fluency', 'dialogue'], 'Konuşma & Telaffuz'],
-      [['okuma', 'reading', 'paragraf', 'çeviri', 'translation'], 'Okuma & Çeviri (Reading)'],
-      [['yazma', 'writing', 'essay', 'paragraph'], 'Yazma (Writing)'],
-      [['yds', 'yökdil', 'eyds', 'toefl', 'ielts', 'yks', 'soru çözümü', 'deneme'], 'Sınav Hazırlığı'],
-      [['başlangıç', 'beginner', 'a1', 'a2', 'temel', 'alfabe'], 'Temel Seviye (A1-A2)'],
-      [['orta seviye', 'intermediate', 'b1', 'b2'], 'Orta Seviye (B1-B2)']
-    ];
-
-    for (const [keywords, topic] of rules) {
-      if (keywords.some(kw => lower.includes(kw))) {
-        return topic;
-      }
-    }
-
-    const delims = [' - ', ' : ', ': ', ' | ', ' / ', ' #'];
-    for (const d of delims) {
-      const idx = videoTitle.indexOf(d);
-      if (idx >= 3 && idx <= 35) {
-        const candidate = videoTitle.substring(0, idx).trim();
-        if (!/^\d+$/.test(candidate)) return candidate;
-      }
-    }
-
-    return 'Genel Konular';
-  },
-
-  async fetchPlaylist(urlOrId, userApiKey = '') {
-    const playlistId = this.extractPlaylistId(urlOrId);
+  async fetchPlaylist(input, subjectId, apiKey = '') {
+    const playlistId = this.extractPlaylistId(input);
     if (!playlistId) {
-      throw new Error("Geçerli bir YouTube oynatma listesi linki veya ID'si giriniz.");
+      throw new Error("Geçerli bir YouTube oynatma listesi URL'si veya ID'si bulunamadı.");
     }
 
-    // 1. If user provided a YouTube API key, call official YouTube Data API v3
-    if (userApiKey && userApiKey.trim() !== '') {
-      return await this.fetchViaOfficialApi(playlistId, userApiKey.trim());
+    if (apiKey && apiKey.trim().length > 10) {
+      return await this.fetchViaOfficialApi(playlistId, subjectId, apiKey.trim());
     }
 
-    // 2. Call YouTube Data via Invidious / Piped Open CORS Proxies
-    try {
-      return await this.fetchViaPublicInstances(playlistId);
-    } catch (err) {
-      console.warn("Public instance error, fallback to RSS/Demo:", err);
-      // If network blocked or CORS error, return sample English curriculum
-      return this.getSampleEnglishCurriculum(playlistId);
-    }
+    return await this.fetchViaFallbackScraper(playlistId, subjectId);
   },
 
-  async fetchViaOfficialApi(playlistId, apiKey) {
-    const listUrl = `https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&id=${playlistId}&key=${apiKey}`;
-    const listRes = await fetch(listUrl);
-    if (!listRes.ok) {
-      const errJson = await listRes.json().catch(() => ({}));
-      throw new Error(errJson.error?.message || `YouTube API Hatası (${listRes.status})`);
-    }
+  async fetchViaOfficialApi(playlistId, subjectId, apiKey) {
+    const listRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${apiKey}`
+    );
+    if (!listRes.ok) throw new Error(`YouTube API Hatası (${listRes.status})`);
     const listData = await listRes.json();
-    const item = listData.items?.[0];
-    if (!item) throw new Error("Oynatma listesi bulunamadı.");
+    if (!listData.items || listData.items.length === 0) {
+      throw new Error("Oynatma listesi bulunamadı veya gizli.");
+    }
 
-    const title = item.snippet?.title || 'YouTube Kursu';
-    const channelTitle = item.snippet?.channelTitle || 'YouTube Eğitmeni';
-    const thumb = item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || `https://img.youtube.com/vi/${playlistId}/hqdefault.jpg`;
+    const snippet = listData.items[0].snippet;
+    const title = snippet.title;
+    const channelTitle = snippet.channelTitle;
+    const thumb = snippet.thumbnails?.high?.url || snippet.thumbnails?.medium?.url || '';
 
-    // Fetch items with pagination
-    let nextPageToken = '';
-    const videos = [];
-    let pos = 0;
+    // Fetch Videos
+    const itemsRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=50&playlistId=${playlistId}&key=${apiKey}`
+    );
+    if (!itemsRes.ok) throw new Error("Video detayları çekilemedi.");
+    const itemsData = await itemsRes.json();
+    const rawItems = itemsData.items || [];
 
-    do {
-      const itemsUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${playlistId}&maxResults=50&pageToken=${nextPageToken}&key=${apiKey}`;
-      const itemsRes = await fetch(itemsUrl);
-      if (!itemsRes.ok) break;
-      const itemsData = await itemsRes.json();
-      
-      const vIds = (itemsData.items || []).map(i => i.snippet?.resourceId?.videoId).filter(Boolean);
-      let durationMap = {};
-      if (vIds.length > 0) {
-        const vUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${vIds.join(',')}&key=${apiKey}`;
-        const vRes = await fetch(vUrl);
-        if (vRes.ok) {
-          const vData = await vRes.json();
-          (vData.items || []).forEach(v => {
-            durationMap[v.id] = this.parseIsoDuration(v.contentDetails?.duration);
-          });
-        }
-      }
-
-      for (const i of (itemsData.items || [])) {
-        const vid = i.snippet?.resourceId?.videoId;
-        if (!vid) continue;
-        const vTitle = i.snippet?.title || `Ders #${pos + 1}`;
-        const dur = durationMap[vid] || 900;
-        videos.push({
-          id: vid,
-          playlistId,
-          title: vTitle,
-          durationSeconds: dur,
-          position: pos++,
-          topic: this.extractTopic(vTitle, title),
-          thumbnailUrl: `https://img.youtube.com/vi/${vid}/hqdefault.jpg`,
-          isCompleted: false
+    const videoIds = rawItems.map(it => it.contentDetails?.videoId).filter(Boolean);
+    let durationMap = {};
+    if (videoIds.length > 0) {
+      const vRes = await fetch(
+        `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${videoIds.join(',')}&key=${apiKey}`
+      );
+      if (vRes.ok) {
+        const vData = await vRes.json();
+        (vData.items || []).forEach(v => {
+          durationMap[v.id] = this.parseIso8601Duration(v.contentDetails?.duration);
         });
       }
+    }
 
-      nextPageToken = itemsData.nextPageToken;
-    } while (nextPageToken && videos.length < 200);
+    const videos = rawItems.map((item, idx) => {
+      const vId = item.contentDetails?.videoId || `v_${idx}`;
+      const vTitle = item.snippet?.title || `Ders #${idx + 1}`;
+      const dur = durationMap[vId] || (1800 + (idx % 4) * 300);
 
-    const totalSeconds = videos.reduce((acc, v) => acc + v.durationSeconds, 0);
+      return {
+        id: vId,
+        playlistId,
+        subjectId,
+        title: vTitle,
+        durationSeconds: dur,
+        position: idx,
+        topic: this.extractTopic(vTitle),
+        thumbnailUrl: item.snippet?.thumbnails?.medium?.url || `https://img.youtube.com/vi/${vId}/hqdefault.jpg`,
+        isCompleted: false
+      };
+    });
+
+    const totalDur = videos.reduce((acc, v) => acc + v.durationSeconds, 0);
 
     return {
       playlist: {
         id: playlistId,
+        subjectId,
         title,
         channelTitle,
         thumbnailUrl: thumb,
         itemCount: videos.length,
-        totalDurationSeconds: totalSeconds,
-        isActive: true
+        totalDurationSeconds: totalDur
       },
       videos
     };
   },
 
-  async fetchViaPublicInstances(playlistId) {
-    // Try multiple public Invidious / Piped APIs with CORS
-    const instances = [
-      `https://invidious.privacydev.net/api/v1/playlists/${playlistId}`,
-      `https://vid.puffyan.us/api/v1/playlists/${playlistId}`,
-      `https://pipedapi.kavin.rocks/playlists/${playlistId}`
+  async fetchViaFallbackScraper(playlistId, subjectId) {
+    const endpoints = [
+      `https://pipedapi.kavin.rocks/playlists/${playlistId}`,
+      `https://api.invidious.io/api/v1/playlists/${playlistId}`
     ];
 
     let lastError = null;
-    for (const endpoint of instances) {
+    for (const ep of endpoints) {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
-        const res = await fetch(endpoint, { signal: controller.signal });
-        clearTimeout(timeoutId);
-
+        const res = await fetch(ep, { headers: { 'Accept': 'application/json' } });
         if (res.ok) {
           const data = await res.json();
-          const title = data.title || data.name || "YouTube Ders Listesi";
-          const channel = data.author || data.uploader || "Eğitmen";
-          const thumb = data.playlistThumbnail || `https://img.youtube.com/vi/${playlistId}/hqdefault.jpg`;
-          const rawVideos = data.videos || data.relatedStreams || [];
+          const title = data.name || data.title || "YouTube Oynatma Listesi";
+          const channel = data.uploader || data.author || "Eğitim Kanalı";
+          const thumb = data.thumbnailUrl || (data.videos?.[0]?.thumbnail) || "";
 
-          if (rawVideos.length > 0) {
-            const videos = rawVideos.map((v, idx) => {
-              const vid = v.videoId || v.url?.split('=')[1] || `vid_${idx}`;
-              const vTitle = v.title || `Ders #${idx + 1}`;
-              const dur = v.lengthSeconds || (v.duration ? parseInt(v.duration, 10) : 900);
+          const rawList = data.relatedStreams || data.videos || [];
+          if (rawList.length > 0) {
+            const videos = rawList.map((item, idx) => {
+              const vid = item.url ? item.url.replace('/watch?v=', '') : (item.videoId || `vid_${idx}`);
+              const vTitle = item.title || `Ders #${idx + 1}`;
+              const dur = Math.max(item.duration || 1800, 300);
+
               return {
                 id: vid,
                 playlistId,
+                subjectId,
                 title: vTitle,
                 durationSeconds: dur,
                 position: idx,
-                topic: this.extractTopic(vTitle, title),
+                topic: this.extractTopic(vTitle),
                 thumbnailUrl: `https://img.youtube.com/vi/${vid}/hqdefault.jpg`,
                 isCompleted: false
               };
@@ -363,12 +507,12 @@ const YouTubeService = {
             return {
               playlist: {
                 id: playlistId,
+                subjectId,
                 title,
                 channelTitle: channel,
                 thumbnailUrl: thumb,
                 itemCount: videos.length,
-                totalDurationSeconds: totalDuration,
-                isActive: true
+                totalDurationSeconds: totalDuration
               },
               videos
             };
@@ -379,72 +523,190 @@ const YouTubeService = {
       }
     }
 
-    throw lastError || new Error("Oynatma listesi yüklenemedi.");
+    throw lastError || new Error("Oynatma listesi yüklenemedi. İnternet bağlantınızı kontrol edin veya geçerli bir liste girin.");
   },
 
-  getSampleEnglishCurriculum(playlistId = 'PL_sample_english_course') {
-    const courseTitle = "Sıfırdan İleri Seviye İngilizce Eğitim Seti (A1 - B2)";
-    const channel = "İngilizce Akademi & Öğretmenler Kulübü";
+  extractTopic(videoTitle) {
+    if (!videoTitle) return 'Genel Konu';
+    const clean = videoTitle.trim();
+    if (clean.includes('|')) return clean.split('|')[0].trim();
+    if (clean.includes('-')) return clean.split('-')[0].trim();
+    if (clean.includes(':')) return clean.split(':')[0].trim();
+    return clean.slice(0, 35);
+  },
 
-    const lessons = [
-      ["İngilizce Gramer #1 - Present Simple (Geniş Zaman)", 1800, "Gramer (Grammar)"],
-      ["İngilizce Gramer #2 - Present Continuous (Şimdiki Zaman)", 2100, "Gramer (Grammar)"],
-      ["İngilizce Gramer #3 - Simple Past Tense (Geçmiş Zaman)", 2400, "Gramer (Grammar)"],
-      ["İngilizce Gramer #4 - Past Continuous & While/When", 1950, "Gramer (Grammar)"],
-      ["İngilizce Gramer #5 - Future Tense (Will vs Be Going To)", 2200, "Gramer (Grammar)"],
-      ["Kelime Bilgisi | En Çok Kullanılan 100 Fiil ve Örnek Cümleler", 2700, "Kelime Bilgisi (Vocabulary)"],
-      ["Kelime Bilgisi | Günlük Yaşamda 50 Phrasal Verb", 2400, "Kelime Bilgisi (Vocabulary)"],
-      ["Kelime Bilgisi | B1 Seviyesi Sıfatlar ve Zıt Anlamlılar", 1800, "Kelime Bilgisi (Vocabulary)"],
-      ["Dinleme (Listening) | A2-B1 Seviye Günlük Konuşma Diyalogları", 1500, "Dinleme (Listening)"],
-      ["Dinleme (Listening) | İngilizce Podcast: İş ve Sosyal Yaşam", 2100, "Dinleme (Listening)"],
-      ["Konuşma & Telaffuz | Doğru Telaffuz Teknikleri ve Vurgular", 1800, "Konuşma & Telaffuz"],
-      ["Konuşma & Telaffuz | Akıcı Konuşma Pratikleri ve Kalıplar", 2100, "Konuşma & Telaffuz"],
-      ["Okuma & Çeviri | Kısa Hikayelerle İngilizce Okuma Analizi", 2400, "Okuma & Çeviri (Reading)"],
-      ["Okuma & Çeviri | Makale Çevirisi ve Cümle Çözümlemesi", 2700, "Okuma & Çeviri (Reading)"],
-      ["Sınav Hazırlığı | YDS & YÖKDİL Gramer Soru Çözümü #1", 3000, "Sınav Hazırlığı"],
-      ["Sınav Hazırlığı | Cümle Tamamlama ve Paragraf Taktikleri", 2700, "Sınav Hazırlığı"]
+  /**
+   * AGS + YDS Tam Müfredat Örnek Paketi
+   * Kullanıcı tek tıkla 7 dersin tümünü gerçekçi ve zengin içerikle doldurabilir.
+   */
+  getFullAgsAndYdsCurriculum() {
+    const curricula = [
+      // 1. EĞİTİM BİLİMLERİ (AGS %37.5)
+      {
+        subjectId: 'egitim-bilimleri',
+        playlistTitle: 'AGS 2026 - Eğitim Bilimleri & Millî Eğitim Sistemi Kapsamlı Set',
+        channel: 'Akademi Eğitim Bilimleri',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=400&q=80',
+        lessons: [
+          ["Gelişim Psikolojisi #1 - Temel İlkeler ve Fiziksel Gelişim", 2100, "Gelişim Psikolojisi"],
+          ["Gelişim Psikolojisi #2 - Piaget Bilişsel Gelişim Dönemleri", 2700, "Gelişim Psikolojisi"],
+          ["Gelişim Psikolojisi #3 - Erikson Psikososyal Gelişim Kuramı", 2400, "Gelişim Psikolojisi"],
+          ["Öğrenme Psikolojisi #1 - Klasik Koşullanma ve İlkeleri", 2400, "Öğrenme Psikolojisi"],
+          ["Öğrenme Psikolojisi #2 - Edimsel Koşullanma & Pekiştireçler", 2700, "Öğrenme Psikolojisi"],
+          ["Öğretim Yöntem ve Teknikleri (ÖYT) - Çağdaş Yaklaşımlar", 3000, "ÖYT"],
+          ["Öğretim Yöntem ve Teknikleri (ÖYT) - Aktif Öğrenme Modelleri", 2700, "ÖYT"],
+          ["Ölçme ve Değerlendirme - Test İstatistiği ve Madde Analizi", 2400, "Ölçme ve Değerlendirme"],
+          ["Rehberlik ve Özel Eğitim - Bireyi Tanıma Teknikleri", 2100, "Rehberlik"],
+          ["Türk Millî Eğitim Sistemi ve Teşkilat Yapısı - Bakanlık Vizyonu", 2400, "MEB Sistemi"]
+        ]
+      },
+      // 2. SÖZEL YETENEK (TÜRKÇE - AGS %18.75)
+      {
+        subjectId: 'turkce',
+        playlistTitle: 'AGS 2026 - Sözel Yetenek & Paragraf Taktikleri',
+        channel: 'Türkçe Ustası',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=400&q=80',
+        lessons: [
+          ["Sözcükte ve Cümlede Anlam - Örtülü Anlam & Yorum", 1800, "Anlam Bilgisi"],
+          ["Paragrafta Ana Düşünce ve Yardımcı Fikirler Taktikleri", 2400, "Paragraf"],
+          ["Paragraf Yapısı - Akışı Bozan Cümle & Yer Değiştirme", 2100, "Paragraf"],
+          ["Dil Bilgisi - Ses Olayları ve Yazım Kuralları", 2400, "Dil Bilgisi"],
+          ["Dil Bilgisi - Noktalama İşaretleri ve Püf Noktaları", 1800, "Dil Bilgisi"],
+          ["Dil Bilgisi - Cümlenin Ögeleri ve Cümle Türleri", 2400, "Dil Bilgisi"],
+          ["Anlatım Bozuklukları - Bağlaşıklık ve Bağdaşıklık", 1800, "Anlatım Bozukluğu"],
+          ["Sözel Mantık - Tablo Oluşturma ve Kesin Çıkarım", 2700, "Sözel Mantık"]
+        ]
+      },
+      // 3. SAYISAL YETENEK (MATEMATİK - AGS %18.75)
+      {
+        subjectId: 'matematik',
+        playlistTitle: 'AGS 2026 - Sayısal Yetenek & Problem Çözümleri',
+        channel: 'Matematik Rehberi',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&q=80',
+        lessons: [
+          ["Temel Kavramlar, Tek-Çift ve Asal Sayılar", 2100, "Temel Sayılar"],
+          ["Bölme, Bölünebilme Kuralları ve EBOB-EKOK", 2400, "Bölünebilme"],
+          ["Rasyonel Sayılar ve Ondalık Gösterim", 1800, "Rasyonel Sayılar"],
+          ["Birinci Dereceden Denklemler ve Eşitsizlikler", 2400, "Cebir"],
+          ["Oran-Orantı ve Problem Çözme Stratejileri", 2100, "Problemler"],
+          ["Sayı, Kesir ve Yaş Problemleri (Yeni Nesil)", 2700, "Problemler"],
+          ["Hız, Yüzde, Kâr-Zarar Problemleri", 2400, "Problemler"],
+          ["Tablo, Grafik Yorumlama ve Sayısal Mantık", 2700, "Sayısal Mantık"]
+        ]
+      },
+      // 4. EĞİTİM MEVZUATI (AGS %10)
+      {
+        subjectId: 'mevzuat',
+        playlistTitle: 'AGS 2026 - Eğitim Mevzuatı & Hukuk Tam Seri',
+        channel: 'Eğitim Mevzuatı Platformu',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&q=80',
+        lessons: [
+          ["T.C. Anayasası - Temel Hak ve Ödevler, Eğitim Hakkı", 2400, "Anayasa Hukuku"],
+          ["Öğretmenlik Mesleği Kanunu (7528 Sayılı ÖMK Analizi)", 2700, "ÖMK"],
+          ["1739 Sayılı Millî Eğitim Temel Kanunu - Temel İlkeler", 2100, "1739 Kanun"],
+          ["222 Sayılı İlköğretim ve Eğitim Kanunu Esasları", 1800, "222 Kanun"],
+          ["657 Sayılı Devlet Memurları Kanunu - Disiplin & Haklar", 2400, "657 DMK"],
+          ["Cumhurbaşkanlığı Kararnamesi 1 Nolu - MEB Teşkilatı", 2100, "1 Nolu CBK"]
+        ]
+      },
+      // 5. TARİH (AGS %7.5)
+      {
+        subjectId: 'tarih',
+        playlistTitle: 'AGS 2026 - Tarih Konu Anlatımı & Kronoloji',
+        channel: 'Tarih Akademisi',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1461360370896-922624d12aa1?w=400&q=80',
+        lessons: [
+          ["İslamiyet Öncesi Türk Devletleri Kültür ve Medeniyeti", 2100, "İlk Türk Devletleri"],
+          ["İlk Türk-İslam Devletleri ve Anadolu Selçuklu Tarihi", 2400, "Türk-İslam"],
+          ["Osmanlı Devleti Kuruluş ve Yükselme Dönemleri", 2700, "Osmanlı Devleti"],
+          ["Osmanlı Kültür, Sanat ve Yönetim Teşkilatı", 2400, "Osmanlı Teşkilat"],
+          ["20. Yüzyıl Başlarında Osmanlı ve I. Dünya Savaşı", 2100, "I. Dünya Savaşı"],
+          ["Millî Mücadele Hazırlık Dönemi & Muharebeler", 2700, "Millî Mücadele"],
+          ["Atatürk İlke ve İnkılapları & Çağdaş Türk Tarihi", 2400, "İnkılap Tarihi"]
+        ]
+      },
+      // 6. TÜRKİYE COĞRAFYASI (AGS %7.5)
+      {
+        subjectId: 'cografya',
+        playlistTitle: 'AGS 2026 - Haritalarla Türkiye Coğrafyası',
+        channel: 'Coğrafya Atlası',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=400&q=80',
+        lessons: [
+          ["Türkiye'nin Coğrafi Konumu, Jeopolitiği ve Sonuçları", 2100, "Konum"],
+          ["Türkiye'nin Yer Şekilleri, Dağlar, Ovalar ve Platolar", 2700, "Fiziki Coğrafya"],
+          ["Türkiye'nin İklimi, Sıcaklık Dağılımı ve Bitki Örtüsü", 2400, "İklim"],
+          ["Türkiye'de Nüfus, Yerleşme ve Göç Dinamikleri", 2100, "Beşeri Coğrafya"],
+          ["Türkiye'de Tarım, Hayvancılık ve Ormancılık", 2100, "Ekonomik Coğrafya"],
+          ["Madenler, Enerji Kaynakları, Sanayi ve Ulaşım", 2400, "Ekonomik Coğrafya"]
+        ]
+      },
+      // 7. YDS (İNGİLİZCE - TEK DERS)
+      {
+        subjectId: 'yds',
+        playlistTitle: 'YDS İngilizce - Sınav Stratejileri & Master Plan',
+        channel: 'İngilizce Sınav Merkezi',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=400&q=80',
+        lessons: [
+          ["YDS Gramer #1 - Zamanlar (Tenses) ve Zaman Uyumu Kuralları", 2400, "Gramer (Grammar)"],
+          ["YDS Gramer #2 - Modals, Passive & Causatives", 2700, "Gramer (Grammar)"],
+          ["YDS Gramer #3 - Bağlaçlar (Conjunctions) ve Geçiş İfadeleri", 2700, "Gramer (Grammar)"],
+          ["YDS Kelime Stratejisi - En Sık Çıkan Akademik Sıfat & Fiiller", 2400, "Kelime (Vocabulary)"],
+          ["Cümle Tamamlama ve Paragraf Tamamlama Çözüm Taktikleri", 2700, "Soru Tipleri"],
+          ["İngilizce-Türkçe & Türkçe-İngilizce Çeviri Teknikleri", 2100, "Çeviri"],
+          ["Akademik Paragraf Okuma ve Soru Çözüm Analizi", 2700, "Okuma (Reading)"],
+          ["YDS Mini Deneme Çözümü ve Hatalı Seçenek Eleme Sanatı", 3000, "Deneme Analizi"]
+        ]
+      }
     ];
 
-    const videos = lessons.map(([title, duration, topic], idx) => ({
-      id: `demo_vid_${idx}`,
-      playlistId,
-      title,
-      durationSeconds: duration,
-      position: idx,
-      topic,
-      thumbnailUrl: `https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=300&q=80`,
-      isCompleted: false
-    }));
+    const allPlaylists = [];
+    const allVideos = [];
 
-    const totalSeconds = videos.reduce((acc, v) => acc + v.durationSeconds, 0);
+    curricula.forEach(curr => {
+      const pId = `sample_playlist_${curr.subjectId}`;
+      const vids = curr.lessons.map(([title, duration, topic], idx) => ({
+        id: `demo_${curr.subjectId}_${idx}`,
+        playlistId: pId,
+        subjectId: curr.subjectId,
+        title,
+        durationSeconds: duration,
+        position: idx,
+        topic,
+        thumbnailUrl: curr.thumbnailUrl,
+        isCompleted: false
+      }));
 
-    return {
-      playlist: {
-        id: playlistId,
-        title: courseTitle,
-        channelTitle: channel,
-        thumbnailUrl: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=300&q=80",
-        itemCount: videos.length,
-        totalDurationSeconds: totalSeconds,
-        isActive: true
-      },
-      videos
-    };
+      const totalDur = vids.reduce((sum, v) => sum + v.durationSeconds, 0);
+
+      allPlaylists.push({
+        id: pId,
+        subjectId: curr.subjectId,
+        title: curr.playlistTitle,
+        channelTitle: curr.channel,
+        thumbnailUrl: curr.thumbnailUrl,
+        itemCount: vids.length,
+        totalDurationSeconds: totalDur
+      });
+
+      allVideos.push(...vids);
+    });
+
+    return { playlists: allPlaylists, videos: allVideos };
   }
 };
 
 
 // ============================================================================
-// 3. SMART SCHEDULING ENGINE (Akıllı Programlama Motoru)
+// 5. SMART SCHEDULING ENGINE (Akıllı Programlama Motoru)
 // ============================================================================
 
 const SmartSchedulingEngine = {
   /**
    * Bin-Packing with Sequencing Algorithm
-   * 1. Preserves pedagogical sequence
-   * 2. Respects daily capacity limit
-   * 3. Never splits an individual video unless single video alone exceeds capacity
-   * 4. Skips non-study days
+   * Kural 1: Pedagojik ders sırasını korur
+   * Kural 2: Günlük çalışma kapasitesini aşmaz
+   * Kural 3: KESİNLİKLE VİDEO BÖLÜNMEZ kuralı (tek video kapasiteyi tek başına aşmadığı sürece)
+   * Kural 4: Kullanıcının belirlediği haftalık günlere planlar
    */
   generateSchedule(videos, dailyCapacityMinutes, selectedDays, startDateStr) {
     if (!videos || videos.length === 0) return [];
@@ -458,7 +720,7 @@ const SmartSchedulingEngine = {
     const queue = [...videos];
 
     while (queue.length > 0) {
-      // Advance until we hit an active study day
+      // Advance to next active study day
       let currentIsoDay = this.getIsoDay(currentDate);
       while (!activeDaysSet.has(currentIsoDay)) {
         currentDate.setDate(currentDate.getDate() + 1);
@@ -468,48 +730,46 @@ const SmartSchedulingEngine = {
       const dateStr = this.formatLocalDate(currentDate);
       const dayName = YouTubeService.TURKISH_DAYS[currentIsoDay] || 'Gün';
 
-      const assignedVideos = [];
+      const assignedVideoIds = [];
       let accumulatedSeconds = 0;
 
       while (queue.length > 0) {
         const nextVideo = queue[0];
         const vDuration = nextVideo.durationSeconds;
 
-        if (assignedVideos.length === 0) {
-          // First video of the day: always accept it, even if alone exceeds capacity (No split rule)
+        if (assignedVideoIds.length === 0) {
+          // Günün ilk videosu: Kapasiteden uzun olsa dahi bölünmeden bu güne yerleştirilir
           queue.shift();
-          assignedVideos.push(nextVideo.id);
+          assignedVideoIds.push(nextVideo.id);
           accumulatedSeconds += vDuration;
 
-          // If this video alone filled or exceeded capacity, day is complete
           if (accumulatedSeconds >= capacitySeconds) {
             break;
           }
         } else {
-          // Subsequent videos: check if fits into remaining daily capacity
+          // Sonraki videolar: Kalan kapasiteye sığıyorsa ekle
           if (accumulatedSeconds + vDuration <= capacitySeconds) {
             queue.shift();
-            assignedVideos.push(nextVideo.id);
+            assignedVideoIds.push(nextVideo.id);
             accumulatedSeconds += vDuration;
           } else {
-            // Exceeds daily capacity. Rule: DO NOT split video! Close day.
+            // Sığmıyorsa: Kural gereği video bölünmez! Gün kapatılır.
             break;
           }
         }
       }
 
-      if (assignedVideos.length > 0) {
+      if (assignedVideoIds.length > 0) {
         schedulePlans.push({
-          playlistId: videos[0].playlistId,
           date: dateStr,
           dayOfWeek: currentIsoDay,
           dayOfWeekName: dayName,
           totalAssignedSeconds: accumulatedSeconds,
-          videoIds: assignedVideos
+          videoIds: assignedVideoIds
         });
       }
 
-      // Next calendar day
+      // Takvim gününü 1 gün ilerlet
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
@@ -517,7 +777,7 @@ const SmartSchedulingEngine = {
   },
 
   getIsoDay(date) {
-    const day = date.getDay(); // 0 is Sunday, 1 is Monday ...
+    const day = date.getDay(); // 0 Pazar, 1 Pazartesi
     return day === 0 ? 7 : day;
   },
 
@@ -546,7 +806,7 @@ const SmartSchedulingEngine = {
 
 
 // ============================================================================
-// 4. UI CONTROLLER (AppUI)
+// 6. UI CONTROLLER (AppUI)
 // ============================================================================
 
 const AppUI = {
@@ -554,6 +814,8 @@ const AppUI = {
   deferredInstallPrompt: null,
 
   init() {
+    ThemeManager.init();
+    LayoutManager.init();
     this.bindEvents();
     this.initPwa();
     this.initSettingsValues();
@@ -561,18 +823,16 @@ const AppUI = {
   },
 
   initPwa() {
-    // Register Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').then((reg) => {
-          console.log('PWA ServiceWorker registered with scope:', reg.scope);
+          console.log('PWA ServiceWorker registered:', reg.scope);
         }).catch((err) => {
-          console.warn('PWA ServiceWorker registration failed:', err);
+          console.warn('PWA SW error:', err);
         });
       });
     }
 
-    // PWA Install Prompt
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       this.deferredInstallPrompt = e;
@@ -585,7 +845,7 @@ const AppUI = {
         this.deferredInstallPrompt.prompt();
         const choice = await this.deferredInstallPrompt.userChoice;
         if (choice.outcome === 'accepted') {
-          this.showToast('Uygulama ana ekranınıza ekleniyor!', 'success');
+          this.showToast('Uygulama ana ekranınıza kuruluyor!', 'success');
         }
         this.deferredInstallPrompt = null;
         document.getElementById('pwaInstallBtn')?.classList.add('hidden');
@@ -594,22 +854,28 @@ const AppUI = {
   },
 
   bindEvents() {
+    // Quick Theme & Layout toggles in Header
+    document.getElementById('quickThemeToggleBtn')?.addEventListener('click', () => {
+      ThemeManager.toggle();
+    });
+
+    document.getElementById('quickLayoutToggleBtn')?.addEventListener('click', () => {
+      LayoutManager.toggle();
+    });
+
     // Nav bar items
     document.querySelectorAll('.nav-item').forEach(btn => {
       btn.addEventListener('click', () => {
         const target = btn.getAttribute('data-tab');
-        this.switchTab(target);
+        if (target) this.switchTab(target);
       });
     });
 
-    // Capacity Slider
+    // Capacity Range Slider
     const range = document.getElementById('capacityRange');
     range?.addEventListener('input', (e) => {
       const val = parseInt(e.target.value, 10);
       this.updateCapacityDisplay(val);
-    });
-    range?.addEventListener('change', (e) => {
-      const val = parseInt(e.target.value, 10);
       const settings = StorageService.getSettings();
       settings.dailyCapacityMinutes = val;
       StorageService.saveSettings(settings);
@@ -619,11 +885,11 @@ const AppUI = {
     document.querySelectorAll('.day-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const day = parseInt(btn.getAttribute('data-day'), 10);
-        this.toggleDay(day);
+        this.toggleStudyDay(day);
       });
     });
 
-    // Start Date change
+    // Start date input
     document.getElementById('startDateInput')?.addEventListener('change', (e) => {
       const settings = StorageService.getSettings();
       settings.startDate = e.target.value;
@@ -635,523 +901,872 @@ const AppUI = {
       this.handleGenerateSchedule();
     });
 
-    // Playlist Import button
+    // Import Playlist Button & Paste
     document.getElementById('importPlaylistBtn')?.addEventListener('click', () => {
       this.handleImportPlaylist();
     });
 
-    // Paste URL button
     document.getElementById('pasteUrlBtn')?.addEventListener('click', async () => {
       try {
         const text = await navigator.clipboard.readText();
         const input = document.getElementById('playlistUrlInput');
         if (input && text) {
           input.value = text;
-          this.showToast('Link yapıştırıldı!', 'info');
+          this.showToast('Bağlantı panodan yapıştırıldı', 'info');
         }
       } catch {
-        this.showToast('Panodan yapıştırma izni verilmedi.', 'warning');
+        this.showToast('Pano okunamadı, elle yapıştırın', 'warning');
       }
     });
 
-    // Load Sample Course button
-    document.getElementById('loadSampleCourseBtn')?.addEventListener('click', () => {
-      this.handleLoadSampleCourse();
+    // Load Sample Full Curriculum Buttons
+    document.getElementById('loadSampleCurriculumBtn')?.addEventListener('click', () => {
+      this.handleLoadFullCurriculum();
     });
 
-    // Video search
-    document.getElementById('searchVideoInput')?.addEventListener('input', (e) => {
-      this.renderAllVideosList(e.target.value);
+    document.getElementById('loadSampleCurriculumSettingsBtn')?.addEventListener('click', () => {
+      this.handleLoadFullCurriculum();
     });
 
-    // Settings Modal
-    document.getElementById('openSettingsBtn')?.addEventListener('click', () => {
-      const modal = document.getElementById('settingsModal');
-      const apiKeyInput = document.getElementById('apiKeyInput');
-      apiKeyInput.value = StorageService.getSettings().apiKey || '';
-      modal.classList.remove('hidden');
+    // Settings Theme / Layout Buttons
+    document.querySelectorAll('.theme-selector-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const th = btn.getAttribute('data-theme');
+        ThemeManager.setTheme(th);
+      });
     });
 
-    document.getElementById('closeSettingsBtn')?.addEventListener('click', () => {
-      document.getElementById('settingsModal')?.classList.add('hidden');
+    document.querySelectorAll('.layout-selector-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lay = btn.getAttribute('data-layout');
+        LayoutManager.setLayout(lay);
+      });
     });
 
+    // API Key Save & Reset Data
     document.getElementById('saveApiKeyBtn')?.addEventListener('click', () => {
-      const apiKey = document.getElementById('apiKeyInput')?.value.trim() || '';
+      const input = document.getElementById('apiKeyInput');
       const settings = StorageService.getSettings();
-      settings.apiKey = apiKey;
+      settings.apiKey = input ? input.value.trim() : '';
       StorageService.saveSettings(settings);
-      document.getElementById('settingsModal')?.classList.add('hidden');
-      this.showToast('Ayarlar kaydedildi.', 'success');
+      this.showToast('API Anahtarı kaydedildi!', 'success');
     });
 
     document.getElementById('resetAllDataBtn')?.addEventListener('click', () => {
-      if (confirm('Tüm kayıtlı oynatma listeleri ve çalışma programınız silinecek. Emin misiniz?')) {
+      if (confirm('Tüm dersler, videolar ve çalışma programınız silinecek. Emin misiniz?')) {
         StorageService.resetAll();
-        document.getElementById('settingsModal')?.classList.add('hidden');
-        this.render();
         this.showToast('Tüm veriler sıfırlandı.', 'info');
+        this.render();
       }
+    });
+
+    // Video search in Courses tab
+    document.getElementById('searchVideoInput')?.addEventListener('input', (e) => {
+      this.filterVideosList(e.target.value.toLowerCase());
     });
   },
 
   switchTab(tabId) {
     this.activeTab = tabId;
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.getElementById(tabId)?.classList.remove('hidden');
+    document.querySelectorAll('.tab-content').forEach(tab => {
+      tab.classList.add('hidden');
+    });
 
-    // Update bottom nav bar active styling
+    const activeEl = document.getElementById(tabId);
+    if (activeEl) {
+      activeEl.classList.remove('hidden');
+    }
+
+    // Update bottom nav active style
     document.querySelectorAll('.nav-item').forEach(btn => {
       const isTarget = btn.getAttribute('data-tab') === tabId;
       if (isTarget) {
-        btn.classList.add('text-brand-400', 'font-bold');
-        btn.classList.remove('text-slate-400', 'font-medium');
+        btn.classList.add('text-brand-400');
+        btn.classList.remove('text-slate-400');
       } else {
-        btn.classList.remove('text-brand-400', 'font-bold');
-        btn.classList.add('text-slate-400', 'font-medium');
+        btn.classList.remove('text-brand-400');
+        btn.classList.add('text-slate-400');
       }
     });
 
-    this.render();
+    // Scroll top
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.render();
   },
 
   initSettingsValues() {
     const settings = StorageService.getSettings();
-    const capacityRange = document.getElementById('capacityRange');
-    if (capacityRange) capacityRange.value = settings.dailyCapacityMinutes;
+
+    // Capacity range
+    const range = document.getElementById('capacityRange');
+    if (range) range.value = settings.dailyCapacityMinutes;
     this.updateCapacityDisplay(settings.dailyCapacityMinutes);
 
-    const startDateInput = document.getElementById('startDateInput');
-    if (startDateInput) {
-      startDateInput.value = settings.startDate || SmartSchedulingEngine.formatLocalDate(new Date());
+    // Days
+    this.renderDayPickers(settings.selectedDays);
+
+    // Start date
+    const dateInput = document.getElementById('startDateInput');
+    if (dateInput) {
+      dateInput.value = settings.startDate || SmartSchedulingEngine.formatLocalDate(new Date());
     }
 
-    this.renderDayButtons(settings.selectedDays);
+    // API key
+    const apiInput = document.getElementById('apiKeyInput');
+    if (apiInput) apiInput.value = settings.apiKey || '';
+
+    // Render Subject Select options in Playlist Import Card
+    const subjectSelect = document.getElementById('playlistSubjectSelect');
+    if (subjectSelect) {
+      subjectSelect.innerHTML = SUBJECTS.map(s => `
+        <option value="${s.id}">${s.name} [${s.badge}]</option>
+      `).join('');
+    }
   },
 
-  setCapacity(mins) {
-    const range = document.getElementById('capacityRange');
-    if (range) range.value = mins;
-    this.updateCapacityDisplay(mins);
+  updateCapacityDisplay(minutes) {
+    const badge = document.getElementById('capacityDisplayBadge');
+    if (!badge) return;
+    const h = (minutes / 60).toFixed(1).replace('.0', '');
+    badge.textContent = `${minutes} dk (${h} sa)`;
 
-    const settings = StorageService.getSettings();
-    settings.dailyCapacityMinutes = mins;
-    StorageService.saveSettings(settings);
-
-    document.querySelectorAll('.capacity-chip').forEach(btn => {
-      if (btn.innerText.includes(`${mins} dk`)) {
-        btn.classList.add('bg-brand-600', 'text-white', 'border-brand-500');
-        btn.classList.remove('bg-slate-800', 'text-slate-300', 'border-darkBorder');
+    document.querySelectorAll('.capacity-chip').forEach(chip => {
+      const cVal = parseInt(chip.textContent, 10);
+      if (cVal === minutes) {
+        chip.classList.add('bg-brand-600', 'text-white', 'border-brand-500');
+        chip.classList.remove('bg-slate-800', 'text-slate-300');
       } else {
-        btn.classList.remove('bg-brand-600', 'text-white', 'border-brand-500');
-        btn.classList.add('bg-slate-800', 'text-slate-300', 'border-darkBorder');
+        chip.classList.remove('bg-brand-600', 'text-white', 'border-brand-500');
+        chip.classList.add('bg-slate-800', 'text-slate-300');
       }
     });
   },
 
-  updateCapacityDisplay(mins) {
-    const badge = document.getElementById('capacityDisplayBadge');
-    if (badge) {
-      badge.textContent = `${mins} dk (${YouTubeService.formatMinutes(mins)})`;
-    }
-  },
-
-  toggleDay(dayNum) {
+  setCapacity(val) {
+    const range = document.getElementById('capacityRange');
+    if (range) range.value = val;
+    this.updateCapacityDisplay(val);
     const settings = StorageService.getSettings();
-    let days = settings.selectedDays || [1, 2, 3, 4, 5];
-    if (days.includes(dayNum)) {
-      if (days.length > 1) { // En az 1 gün seçili kalsın
-        days = days.filter(d => d !== dayNum);
-      }
-    } else {
-      days.push(dayNum);
-    }
-    days.sort((a, b) => a - b);
-    settings.selectedDays = days;
+    settings.dailyCapacityMinutes = val;
     StorageService.saveSettings(settings);
-    this.renderDayButtons(days);
   },
 
-  renderDayButtons(selectedDays) {
-    const daySet = new Set(selectedDays);
+  renderDayPickers(selectedDays) {
+    const set = new Set(selectedDays);
     document.querySelectorAll('.day-btn').forEach(btn => {
       const d = parseInt(btn.getAttribute('data-day'), 10);
-      if (daySet.has(d)) {
-        btn.className = 'day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-brand-600 text-white border-brand-500 shadow-sm';
+      if (set.has(d)) {
+        btn.classList.add('bg-brand-600', 'text-white', 'border-brand-500');
+        btn.classList.remove('bg-slate-800', 'text-slate-400', 'border-darkBorder');
       } else {
-        btn.className = 'day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-slate-800 text-slate-400 border-darkBorder hover:bg-slate-700';
+        btn.classList.remove('bg-brand-600', 'text-white', 'border-brand-500');
+        btn.classList.add('bg-slate-800', 'text-slate-400', 'border-darkBorder');
       }
     });
+  },
+
+  toggleStudyDay(day) {
+    const settings = StorageService.getSettings();
+    let days = settings.selectedDays || [];
+    if (days.includes(day)) {
+      if (days.length === 1) {
+        this.showToast('En az 1 çalışma günü seçili olmalıdır.', 'warning');
+        return;
+      }
+      days = days.filter(d => d !== day);
+    } else {
+      days.push(day);
+      days.sort((a, b) => a - b);
+    }
+    settings.selectedDays = days;
+    StorageService.saveSettings(settings);
+    this.renderDayPickers(days);
+  },
+
+  setSubjectFilter(subjectId) {
+    const settings = StorageService.getSettings();
+    settings.activeSubjectFilter = subjectId;
+    StorageService.saveSettings(settings);
+    this.render();
   },
 
   render() {
-    const activePlaylist = StorageService.getActivePlaylist();
+    this.renderHeaderInfo();
+    this.renderSubjectFilterChips();
 
-    // Header Course Title
-    const headerTitle = document.getElementById('headerCourseTitle');
-    if (headerTitle) {
-      headerTitle.textContent = activePlaylist ? activePlaylist.title : 'Kurs Yüklenmedi';
+    switch (this.activeTab) {
+      case 'tab-today':
+        this.renderTodayView();
+        break;
+      case 'tab-schedule':
+        this.renderScheduleView();
+        break;
+      case 'tab-progress':
+        this.renderProgressView();
+        break;
+      case 'tab-subjects':
+        this.renderSubjectsView();
+        break;
+      case 'tab-settings':
+        this.renderSettingsView();
+        break;
     }
+  },
 
-    this.renderTodayTab();
-    this.renderScheduleTab();
-    this.renderProgressTab();
-    this.renderPlaylistTab();
+  renderHeaderInfo() {
+    const headerTitle = document.getElementById('headerCourseTitle');
+    const videos = StorageService.getVideos();
+    const playlists = StorageService.getPlaylists();
+
+    if (videos.length === 0) {
+      if (headerTitle) headerTitle.textContent = "Ders Yüklenmedi";
+    } else {
+      const completed = videos.filter(v => v.isCompleted).length;
+      const pct = Math.round((completed / videos.length) * 100);
+      if (headerTitle) {
+        headerTitle.textContent = `${playlists.length} Aktif Ders • %${pct} Tamamlandı`;
+      }
+    }
+  },
+
+  renderSubjectFilterChips() {
+    const settings = StorageService.getSettings();
+    const currentFilter = settings.activeSubjectFilter || 'all';
+
+    const containers = [
+      document.getElementById('todaySubjectFilterContainer'),
+      document.getElementById('scheduleSubjectFilterContainer')
+    ];
+
+    containers.forEach(container => {
+      if (!container) return;
+
+      const chips = [
+        { id: 'all', name: 'Tüm Dersler', icon: 'fa-layer-group', color: '#6366f1' },
+        ...SUBJECTS.map(s => ({ id: s.id, name: s.shortName, icon: s.icon, color: s.color }))
+      ];
+
+      container.innerHTML = chips.map(c => {
+        const isActive = c.id === currentFilter;
+        const activeClass = isActive
+          ? 'bg-brand-600 text-white border-brand-500 shadow-md shadow-brand-500/20'
+          : 'bg-darkSurface text-slate-300 hover:text-white border-darkBorder hover:bg-slate-800';
+
+        return `
+          <button type="button" onclick="AppUI.setSubjectFilter('${c.id}')"
+                  class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold border transition flex items-center gap-1.5 ${activeClass}">
+            <i class="fa-solid ${c.icon}" style="color: ${isActive ? '#ffffff' : c.color}"></i>
+            <span>${c.name}</span>
+          </button>
+        `;
+      }).join('');
+    });
   },
 
   // ==========================================================================
-  // RENDER: TODAY TAB
+  // TAB 1: BUGÜN (TODAY VIEW)
   // ==========================================================================
-  renderTodayTab() {
-    const activePlaylist = StorageService.getActivePlaylist();
+  renderTodayView() {
+    const settings = StorageService.getSettings();
     const todayStr = SmartSchedulingEngine.formatLocalDate(new Date());
-    const todayIsoDay = SmartSchedulingEngine.getIsoDay(new Date());
 
-    // Date Label
     const dateLabel = document.getElementById('todayDateLabel');
     if (dateLabel) {
-      const options = { weekday: 'long', day: 'numeric', month: 'long' };
-      dateLabel.textContent = new Date().toLocaleDateString('tr-TR', options);
+      const now = new Date();
+      const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+      dateLabel.textContent = now.toLocaleDateString('tr-TR', options);
     }
 
-    if (!activePlaylist) {
-      document.getElementById('todayVideoList').innerHTML = '';
-      document.getElementById('todayEmptyState').classList.remove('hidden');
-      document.getElementById('todayEmptyReason').textContent = 'Çalışma programı oluşturmak için önce bir oynatma listesi ekleyin.';
-      this.updateTodayProgress(0, 0, 0);
+    const allVideos = StorageService.getVideos();
+    const allSchedules = StorageService.getSchedules();
+
+    const emptyState = document.getElementById('todayEmptyState');
+    const celebration = document.getElementById('todayCelebrationBanner');
+    const listContainer = document.getElementById('todayVideoList');
+    const filterId = settings.activeSubjectFilter || 'all';
+
+    if (allVideos.length === 0 || allSchedules.length === 0) {
+      if (emptyState) emptyState.classList.remove('hidden');
+      if (celebration) celebration.classList.add('hidden');
+      if (listContainer) listContainer.innerHTML = '';
+      this.updateTodayProgressMetrics([], []);
       return;
     }
 
-    const schedules = StorageService.getSchedules(activePlaylist.id);
-    const todaySchedule = schedules.find(s => s.date === todayStr);
+    // Find schedule for today
+    const todaySchedule = allSchedules.find(s => s.date === todayStr);
 
     if (!todaySchedule || !todaySchedule.videoIds || todaySchedule.videoIds.length === 0) {
-      document.getElementById('todayVideoList').innerHTML = '';
-      document.getElementById('todayEmptyState').classList.remove('hidden');
-      document.getElementById('todayEmptyReason').textContent = `Bugün (${YouTubeService.TURKISH_DAYS[todayIsoDay]}) dinlenme gününüz veya henüz bu gün için ders atanmamış. Program sekmesinden takviminizi güncelleyebilirsiniz.`;
-      this.updateTodayProgress(0, 0, 0);
+      if (emptyState) {
+        emptyState.classList.remove('hidden');
+        const reason = document.getElementById('todayEmptyReason');
+        if (reason) reason.textContent = "Bugün için planlanan ders bulunmuyor. Dinlenme gününüz olabilir veya program tamamlanmıştır.";
+      }
+      if (celebration) celebration.classList.add('hidden');
+      if (listContainer) listContainer.innerHTML = '';
+      this.updateTodayProgressMetrics([], []);
       return;
     }
 
-    document.getElementById('todayEmptyState').classList.add('hidden');
+    if (emptyState) emptyState.classList.add('hidden');
 
-    const allVideos = StorageService.getVideos(activePlaylist.id);
-    const todayVideos = todaySchedule.videoIds.map(vid => allVideos.find(v => v.id === vid)).filter(Boolean);
+    // Retrieve today's videos
+    let todayVideos = todaySchedule.videoIds
+      .map(vId => allVideos.find(v => v.id === vId))
+      .filter(Boolean);
 
-    const completedCount = todayVideos.filter(v => v.isCompleted).length;
-    const totalCount = todayVideos.length;
-    const totalDuration = todayVideos.reduce((acc, v) => acc + v.durationSeconds, 0);
-    const remainingDuration = todayVideos.filter(v => !v.isCompleted).reduce((acc, v) => acc + v.durationSeconds, 0);
+    // Filter by subject if chosen
+    const displayVideos = filterId === 'all'
+      ? todayVideos
+      : todayVideos.filter(v => v.subjectId === filterId);
 
-    this.updateTodayProgress(completedCount, totalCount, totalDuration, remainingDuration);
+    this.updateTodayProgressMetrics(todayVideos, displayVideos);
 
-    // List rendering
-    const container = document.getElementById('todayVideoList');
-    container.innerHTML = todayVideos.map(v => this.createVideoCardHtml(v)).join('');
-
-    // Celebration banner
-    const celebration = document.getElementById('todayCelebrationBanner');
-    if (totalCount > 0 && completedCount === totalCount) {
-      celebration.classList.remove('hidden');
-    } else {
-      celebration.classList.add('hidden');
-    }
-
-    document.getElementById('todayItemCountBadge').textContent = `${totalCount} Ders`;
-  },
-
-  updateTodayProgress(completed, total, totalDuration, remainingDuration = 0) {
-    const fraction = total > 0 ? (completed / total) : 0;
-    const percent = Math.round(fraction * 100);
-
-    document.getElementById('todayProgressBadge').textContent = `%${percent}`;
-    document.getElementById('todayProgressBar').style.width = `${percent}%`;
-    document.getElementById('todayVideosCountLabel').textContent = `${total} dersten ${completed}'i tamamlandı`;
-    document.getElementById('todayDurationLabel').textContent = YouTubeService.formatDuration(totalDuration);
-    document.getElementById('todayRemainingTimeLabel').textContent = `Kalan: ${YouTubeService.formatDuration(remainingDuration)}`;
-
-    const statusText = document.getElementById('todayDayStatusText');
-    if (statusText) {
-      if (total === 0) statusText.textContent = 'Ders yok';
-      else if (completed === total) statusText.textContent = 'Harika! Tamamlandı ✓';
-      else statusText.textContent = 'Hedefe odaklan';
-    }
-  },
-
-  // ==========================================================================
-  // RENDER: SCHEDULE TAB
-  // ==========================================================================
-  renderScheduleTab() {
-    const activePlaylist = StorageService.getActivePlaylist();
-    const container = document.getElementById('scheduleTimelineContainer');
-    const summaryCard = document.getElementById('scheduleSummaryCard');
-
-    if (!activePlaylist) {
-      container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Henüz bir kurs eklenmedi.</p>`;
-      summaryCard.classList.add('hidden');
+    if (displayVideos.length === 0) {
+      listContainer.innerHTML = `
+        <div class="text-center py-8 text-xs text-slate-400 bg-darkSurface/50 rounded-2xl border border-dashed border-darkBorder">
+          Seçilen derse ait bugün için video planlanmamış.
+        </div>
+      `;
       return;
     }
 
-    const schedules = StorageService.getSchedules(activePlaylist.id);
-    if (!schedules || schedules.length === 0) {
-      container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Bu kurs için henüz program oluşturulmadı. Yukarıdaki butona tıklayarak hemen oluşturun.</p>`;
-      summaryCard.classList.add('hidden');
-      return;
-    }
-
-    summaryCard.classList.remove('hidden');
-    const totalDays = schedules.length;
-    const allVideos = StorageService.getVideos(activePlaylist.id);
-    const totalDuration = allVideos.reduce((acc, v) => acc + v.durationSeconds, 0);
-    const finishDate = schedules[schedules.length - 1]?.date || '-';
-
-    document.getElementById('summaryTotalDays').textContent = `${totalDays} Gün`;
-    document.getElementById('summaryTotalHours').textContent = YouTubeService.formatDuration(totalDuration);
-    document.getElementById('summaryFinishDate').textContent = finishDate;
-
-    // Timeline days list
-    container.innerHTML = schedules.map((sch, dayIndex) => {
-      const dayVideos = sch.videoIds.map(vid => allVideos.find(v => v.id === vid)).filter(Boolean);
-      const isAllDone = dayVideos.length > 0 && dayVideos.every(v => v.isCompleted);
-      const completedCount = dayVideos.filter(v => v.isCompleted).length;
+    // Render Lesson Cards
+    listContainer.innerHTML = displayVideos.map(video => {
+      const subject = SUBJECTS.find(s => s.id === video.subjectId) || {
+        name: 'Ders', icon: 'fa-book', color: '#6366f1', badge: 'AGS'
+      };
+      const durationStr = YouTubeService.formatDuration(video.durationSeconds);
+      const isDone = video.isCompleted;
 
       return `
-        <div class="bg-darkSurface border border-darkBorder rounded-2xl overflow-hidden shadow-md">
-          <div class="p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-800/40 transition" onclick="AppUI.toggleScheduleAccordion(${dayIndex})">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl ${isAllDone ? 'bg-emerald-500/20 text-emerald-400' : 'bg-brand-500/20 text-brand-400'} flex flex-col items-center justify-center font-bold text-xs shrink-0">
-                <span>${sch.dayOfWeekName.substring(0, 3)}</span>
-                <span class="text-[10px] font-normal opacity-80">${sch.date.split('-')[2]}</span>
-              </div>
-              <div>
-                <h4 class="text-xs font-bold text-white flex items-center gap-2">
-                  <span>Gün ${dayIndex + 1}: ${sch.dayOfWeekName} (${sch.date})</span>
-                  ${isAllDone ? '<i class="fa-solid fa-circle-check text-emerald-400 text-xs"></i>' : ''}
-                </h4>
-                <p class="text-[11px] text-slate-400">
-                  ${dayVideos.length} ders • ${YouTubeService.formatDuration(sch.totalAssignedSeconds)} (${completedCount}/${dayVideos.length} bitti)
-                </p>
-              </div>
+        <div class="bg-darkSurface border border-darkBorder hover:border-brand-500/40 rounded-2xl p-3.5 transition shadow-md flex items-center gap-3 group">
+          <!-- Checkbox -->
+          <label class="cursor-pointer relative flex items-center justify-center shrink-0">
+            <input type="checkbox" ${isDone ? 'checked' : ''} 
+                   onchange="AppUI.toggleVideo('${video.id}', this.checked)"
+                   class="lesson-checkbox sr-only">
+            <div class="w-7 h-7 rounded-xl border-2 ${isDone ? 'bg-emerald-600 border-emerald-500' : 'border-slate-600 bg-slate-800/80 group-hover:border-brand-500'} flex items-center justify-center transition">
+              <i class="fa-solid fa-check text-white text-xs ${isDone ? 'opacity-100' : 'opacity-0'} transition"></i>
             </div>
-            <i id="accordion-icon-${dayIndex}" class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform"></i>
+          </label>
+
+          <!-- Thumbnail with play button -->
+          <div class="relative w-16 h-12 rounded-xl overflow-hidden shrink-0 bg-slate-800 cursor-pointer" onclick="AppUI.openVideoModal('${video.id}', '${video.title.replace(/'/g, "\\'")}')">
+            <img src="${video.thumbnailUrl}" alt="Thumb" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition">
+              <i class="fa-solid fa-play text-white text-xs drop-shadow"></i>
+            </div>
           </div>
 
-          <div id="accordion-content-${dayIndex}" class="hidden px-3.5 pb-3.5 pt-1 space-y-2 border-t border-darkBorder/60">
-            ${dayVideos.map(v => this.createVideoCardHtml(v)).join('')}
-          </div>
-        </div>
-      `;
-    }).join('');
-  },
-
-  toggleScheduleAccordion(index) {
-    const content = document.getElementById(`accordion-content-${index}`);
-    const icon = document.getElementById(`accordion-icon-${index}`);
-    if (content) {
-      content.classList.toggle('hidden');
-      if (icon) icon.classList.toggle('rotate-180');
-    }
-  },
-
-  // ==========================================================================
-  // RENDER: PROGRESS TAB
-  // ==========================================================================
-  renderProgressTab() {
-    const activePlaylist = StorageService.getActivePlaylist();
-    const container = document.getElementById('topicProgressContainer');
-
-    if (!activePlaylist) {
-      document.getElementById('overallPercentageBadge').textContent = '%0';
-      document.getElementById('overallProgressBar').style.width = '0%';
-      document.getElementById('progressCourseSubtitle').textContent = 'Aktif kurs bulunmuyor';
-      document.getElementById('metricCompletedVideos').textContent = '0 / 0';
-      document.getElementById('metricRemainingDuration').textContent = '0 sa';
-      document.getElementById('metricTotalDuration').textContent = '0 sa';
-      container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">İstatistikleri görmek için oynatma listesi ekleyin.</p>`;
-      return;
-    }
-
-    const videos = StorageService.getVideos(activePlaylist.id);
-    const totalCount = videos.length;
-    const completedCount = videos.filter(v => v.isCompleted).length;
-    const fraction = totalCount > 0 ? (completedCount / totalCount) : 0;
-    const percent = Math.round(fraction * 100);
-
-    const totalSeconds = videos.reduce((acc, v) => acc + v.durationSeconds, 0);
-    const remainingSeconds = videos.filter(v => !v.isCompleted).reduce((acc, v) => acc + v.durationSeconds, 0);
-
-    document.getElementById('overallPercentageBadge').textContent = `%${percent}`;
-    document.getElementById('overallProgressBar').style.width = `${percent}%`;
-    document.getElementById('progressCourseSubtitle').textContent = activePlaylist.title;
-    document.getElementById('metricCompletedVideos').textContent = `${completedCount} / ${totalCount}`;
-    document.getElementById('metricRemainingDuration').textContent = YouTubeService.formatDuration(remainingSeconds);
-    document.getElementById('metricTotalDuration').textContent = YouTubeService.formatDuration(totalSeconds);
-
-    // Group videos by Topic
-    const topicMap = {};
-    videos.forEach(v => {
-      const t = v.topic || 'Genel';
-      if (!topicMap[t]) {
-        topicMap[t] = { topic: t, total: 0, completed: 0, totalDuration: 0, remainingDuration: 0 };
-      }
-      topicMap[t].total += 1;
-      topicMap[t].totalDuration += v.durationSeconds;
-      if (v.isCompleted) {
-        topicMap[t].completed += 1;
-      } else {
-        topicMap[t].remainingDuration += v.durationSeconds;
-      }
-    });
-
-    const topicList = Object.values(topicMap);
-    document.getElementById('topicsCountBadge').textContent = `${topicList.length} Konu`;
-
-    container.innerHTML = topicList.map(t => {
-      const tFraction = t.total > 0 ? (t.completed / t.total) : 0;
-      const tPercent = Math.round(tFraction * 100);
-      const isDone = t.completed >= t.total;
-
-      return `
-        <div class="bg-darkSurface border border-darkBorder rounded-2xl p-4 shadow-md space-y-2">
-          <div class="flex items-center justify-between">
-            <h4 class="text-xs font-bold text-white flex items-center gap-2">
-              <span>${t.topic}</span>
-              ${isDone ? '<span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-semibold px-2 py-0.5 rounded-md">Tamamlandı ✓</span>' : ''}
+          <!-- Video Details -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5 mb-0.5">
+              <span class="subject-badge" style="background-color: ${subject.color}25; color: ${subject.color}; border: 1px solid ${subject.color}40">
+                <i class="fa-solid ${subject.icon} mr-1"></i>${subject.shortName || subject.name}
+              </span>
+              <span class="text-[10px] text-slate-400 truncate">• ${video.topic || 'Konu'}</span>
+            </div>
+            <h4 class="text-xs font-bold ${isDone ? 'completed-text text-slate-400' : 'text-slate-100'} line-clamp-1 leading-snug">
+              ${video.title}
             </h4>
-            <span class="text-xs font-bold ${isDone ? 'text-emerald-400' : 'text-brand-400'}">%${tPercent}</span>
-          </div>
-
-          <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-            <div class="h-full rounded-full ${isDone ? 'bg-emerald-500' : 'bg-brand-500'} transition-all duration-500" style="width: ${tPercent}%"></div>
-          </div>
-
-          <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-            <span>${t.total} videodan ${t.completed}'i tamamlandı</span>
-            <span class="font-medium ${isDone ? 'text-emerald-400' : 'text-slate-300'}">
-              ${isDone ? 'Bitti' : `${YouTubeService.formatDuration(t.remainingDuration)} kaldı`}
-            </span>
+            <div class="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
+              <span><i class="fa-solid fa-clock text-slate-500 mr-1"></i>${durationStr}</span>
+              ${isDone ? '<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-circle-check mr-1"></i>Tamamlandı</span>' : ''}
+            </div>
           </div>
         </div>
       `;
     }).join('');
   },
 
-  // ==========================================================================
-  // RENDER: PLAYLIST TAB
-  // ==========================================================================
-  renderPlaylistTab() {
-    const activePlaylist = StorageService.getActivePlaylist();
-    const card = document.getElementById('activePlaylistCard');
-    const videosSection = document.getElementById('playlistVideosSection');
+  updateTodayProgressMetrics(todayVideos, displayVideos) {
+    const badge = document.getElementById('todayProgressBadge');
+    const countLabel = document.getElementById('todayVideosCountLabel');
+    const durLabel = document.getElementById('todayDurationLabel');
+    const progressBar = document.getElementById('todayProgressBar');
+    const remainingLabel = document.getElementById('todayRemainingTimeLabel');
+    const statusText = document.getElementById('todayDayStatusText');
+    const celebration = document.getElementById('todayCelebrationBanner');
+    const itemCountBadge = document.getElementById('todayItemCountBadge');
 
-    if (!activePlaylist) {
-      card?.classList.add('hidden');
-      videosSection?.classList.add('hidden');
+    if (itemCountBadge) itemCountBadge.textContent = `${displayVideos.length} Ders`;
+
+    if (todayVideos.length === 0) {
+      if (badge) badge.textContent = '%0';
+      if (countLabel) countLabel.textContent = "0 dersten 0'ı tamamlandı";
+      if (durLabel) durLabel.textContent = '0 dk';
+      if (progressBar) progressBar.style.width = '0%';
+      if (remainingLabel) remainingLabel.textContent = 'Kalan: 0 dk';
       return;
     }
 
-    card?.classList.remove('hidden');
-    videosSection?.classList.remove('hidden');
+    const completed = todayVideos.filter(v => v.isCompleted).length;
+    const total = todayVideos.length;
+    const pct = Math.round((completed / total) * 100);
 
-    document.getElementById('activePlaylistTitle').textContent = activePlaylist.title;
-    document.getElementById('activePlaylistChannel').textContent = activePlaylist.channelTitle;
-    document.getElementById('activePlaylistThumb').src = activePlaylist.thumbnailUrl;
-    document.getElementById('activePlaylistVideoCount').innerHTML = `<i class="fa-solid fa-film text-brand-400 mr-1"></i>${activePlaylist.itemCount} Ders`;
-    document.getElementById('activePlaylistTotalDuration').innerHTML = `<i class="fa-solid fa-clock text-brand-400 mr-1"></i>${YouTubeService.formatDuration(activePlaylist.totalDurationSeconds)}`;
+    const totalSec = todayVideos.reduce((acc, v) => acc + v.durationSeconds, 0);
+    const completedSec = todayVideos.filter(v => v.isCompleted).reduce((acc, v) => acc + v.durationSeconds, 0);
+    const remSec = Math.max(0, totalSec - completedSec);
 
-    this.renderAllVideosList();
-  },
+    if (badge) badge.textContent = `%${pct}`;
+    if (countLabel) countLabel.textContent = `${total} dersten ${completed}'i tamamlandı`;
+    if (durLabel) durLabel.textContent = YouTubeService.formatDuration(totalSec);
+    if (progressBar) progressBar.style.width = `${pct}%`;
+    if (remainingLabel) remainingLabel.textContent = `Kalan: ${YouTubeService.formatDuration(remSec)}`;
 
-  renderAllVideosList(filterQuery = '') {
-    const activePlaylist = StorageService.getActivePlaylist();
-    if (!activePlaylist) return;
-
-    let videos = StorageService.getVideos(activePlaylist.id);
-    if (filterQuery && filterQuery.trim() !== '') {
-      const q = filterQuery.toLowerCase().trim();
-      videos = videos.filter(v => v.title.toLowerCase().includes(q) || (v.topic && v.topic.toLowerCase().includes(q)));
+    if (pct === 100) {
+      if (statusText) statusText.textContent = 'Günün hedefi bitti! 🎯';
+      if (celebration) celebration.classList.remove('hidden');
+    } else {
+      if (statusText) statusText.textContent = `${total - completed} ders kaldı`;
+      if (celebration) celebration.classList.add('hidden');
     }
-
-    document.getElementById('playlistVideosCountLabel').textContent = videos.length;
-    const container = document.getElementById('allVideosListContainer');
-    container.innerHTML = videos.map(v => this.createVideoCardHtml(v)).join('');
   },
 
-  // Video Card HTML Template
-  createVideoCardHtml(video) {
-    const durationFormatted = YouTubeService.formatDuration(video.durationSeconds);
-    return `
-      <div class="bg-darkSurface border border-darkBorder rounded-xl p-3 flex items-center justify-between gap-3 shadow-sm hover:border-slate-700 transition ${video.isCompleted ? 'opacity-70' : ''}">
-        <!-- Checkbox -->
-        <label class="cursor-pointer flex items-center shrink-0">
-          <input type="checkbox" ${video.isCompleted ? 'checked' : ''} onchange="AppUI.toggleComplete('${video.id}', this.checked)" class="lesson-checkbox sr-only">
-          <div class="w-6 h-6 rounded-lg border-2 ${video.isCompleted ? 'bg-emerald-600 border-emerald-600' : 'border-slate-600 bg-slate-900'} flex items-center justify-center transition">
-            <i class="fa-solid fa-check text-white text-xs ${video.isCompleted ? '' : 'hidden'}"></i>
-          </div>
-        </label>
-
-        <!-- Video Info -->
-        <div class="flex-1 min-w-0" onclick="AppUI.openVideoModal('${video.id}', '${video.title.replace(/'/g, "\\'")}')">
-          <div class="flex items-center gap-1.5 mb-0.5">
-            <span class="text-[10px] font-semibold bg-brand-500/10 text-brand-400 border border-brand-500/20 px-1.5 py-0.2 rounded">${video.topic || 'Ders'}</span>
-            <span class="text-[11px] text-slate-400 flex items-center gap-1">
-              <i class="fa-regular fa-clock text-[10px]"></i>
-              ${durationFormatted}
-            </span>
-          </div>
-          <h5 class="text-xs font-semibold text-white truncate cursor-pointer hover:text-brand-300 transition ${video.isCompleted ? 'completed-text' : ''}">${video.title}</h5>
-        </div>
-
-        <!-- Watch Button -->
-        <button onclick="AppUI.openVideoModal('${video.id}', '${video.title.replace(/'/g, "\\'")}')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 hover:text-brand-400 hover:bg-slate-700 shrink-0 flex items-center justify-center transition" title="Videoyu İzle">
-          <i class="fa-solid fa-play text-xs"></i>
-        </button>
-      </div>
-    `;
-  },
-
-  // Toggle Video Completion Handler
-  toggleComplete(videoId, isChecked) {
-    StorageService.toggleVideoCompletion(videoId, isChecked);
-    this.render();
-
-    if (isChecked) {
-      // Trigger subtle confetti celebration if daily goal is completed
-      const active = StorageService.getActivePlaylist();
-      if (active) {
-        const todayStr = SmartSchedulingEngine.formatLocalDate(new Date());
-        const schedules = StorageService.getSchedules(active.id);
-        const todaySch = schedules.find(s => s.date === todayStr);
-        if (todaySch) {
-          const allVideos = StorageService.getVideos(active.id);
-          const todayVideos = todaySch.videoIds.map(id => allVideos.find(v => v.id === id)).filter(Boolean);
-          if (todayVideos.length > 0 && todayVideos.every(v => v.isCompleted)) {
-            this.celebrate();
-          }
+  toggleVideo(videoId, isCompleted) {
+    StorageService.toggleVideoCompletion(videoId, isCompleted);
+    if (isCompleted) {
+      this.showToast('Tebrikler! Ders tamamlandı.', 'success');
+      // Trigger confetti if all today is done
+      const todaySchedule = StorageService.getSchedules().find(
+        s => s.date === SmartSchedulingEngine.formatLocalDate(new Date())
+      );
+      if (todaySchedule) {
+        const allV = StorageService.getVideos();
+        const tVideos = todaySchedule.videoIds.map(id => allV.find(v => v.id === id)).filter(Boolean);
+        if (tVideos.every(v => v.isCompleted)) {
+          this.triggerConfetti();
         }
       }
     }
+    this.render();
   },
 
-  celebrate() {
+  triggerConfetti() {
     if (typeof confetti === 'function') {
       confetti({
-        particleCount: 80,
-        spread: 60,
-        origin: { y: 0.7 }
+        particleCount: 120,
+        spread: 70,
+        origin: { y: 0.6 }
       });
     }
   },
 
-  // Video Modal
+  // ==========================================================================
+  // TAB 2: PROGRAM (SCHEDULE TIMELINE)
+  // ==========================================================================
+  renderScheduleView() {
+    const schedules = StorageService.getSchedules();
+    const allVideos = StorageService.getVideos();
+    const settings = StorageService.getSettings();
+    const filterId = settings.activeSubjectFilter || 'all';
+
+    const summaryCard = document.getElementById('scheduleSummaryCard');
+    const container = document.getElementById('scheduleTimelineContainer');
+
+    if (!container) return;
+
+    if (schedules.length === 0 || allVideos.length === 0) {
+      if (summaryCard) summaryCard.classList.add('hidden');
+      container.innerHTML = `
+        <div class="text-center py-12 px-6 bg-darkSurface/50 border border-dashed border-darkBorder rounded-2xl">
+          <i class="fa-regular fa-calendar-xmark text-4xl text-slate-500 mb-3"></i>
+          <h4 class="text-sm font-bold text-slate-200 mb-1">Henüz Program Oluşturulmadı</h4>
+          <p class="text-xs text-slate-400 mb-4 max-w-xs mx-auto">
+            Yukarıdaki panelden günlük çalışma kapasitenizi ve günleri belirleyip "Akıllı Programı Oluştur" butonuna basın.
+          </p>
+          <button onclick="AppUI.handleGenerateSchedule()" class="py-2.5 px-4 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl transition">
+            <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>
+            Programı Otomatik Oluştur
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    // Schedule Summary Metrics
+    if (summaryCard) {
+      summaryCard.classList.remove('hidden');
+      const totalSec = schedules.reduce((acc, s) => acc + s.totalAssignedSeconds, 0);
+      const totalHours = (totalSec / 3600).toFixed(1);
+      const lastDay = schedules[schedules.length - 1];
+
+      document.getElementById('summaryTotalDays').textContent = `${schedules.length} Gün`;
+      document.getElementById('summaryTotalHours').textContent = `${totalHours} sa`;
+      document.getElementById('summaryFinishDate').textContent = lastDay?.date || '-';
+    }
+
+    const todayStr = SmartSchedulingEngine.formatLocalDate(new Date());
+
+    container.innerHTML = schedules.map((schedule, idx) => {
+      const isToday = schedule.date === todayStr;
+      const dayVideos = schedule.videoIds
+        .map(id => allVideos.find(v => v.id === id))
+        .filter(Boolean);
+
+      const filteredDayVideos = filterId === 'all'
+        ? dayVideos
+        : dayVideos.filter(v => v.subjectId === filterId);
+
+      if (filteredDayVideos.length === 0 && filterId !== 'all') {
+        return ''; // Don't show empty day cards when filtered
+      }
+
+      const completedCount = filteredDayVideos.filter(v => v.isCompleted).length;
+      const isAllDone = filteredDayVideos.length > 0 && completedCount === filteredDayVideos.length;
+      const totalDurationStr = YouTubeService.formatDuration(
+        filteredDayVideos.reduce((acc, v) => acc + v.durationSeconds, 0)
+      );
+
+      return `
+        <div class="bg-darkSurface border ${isToday ? 'border-brand-500 shadow-brand-500/10' : 'border-darkBorder'} rounded-2xl p-4 shadow-lg space-y-3">
+          <!-- Day Header -->
+          <div class="flex items-center justify-between pb-2 border-b border-darkBorder">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-xl ${isToday ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'} flex items-center justify-center font-bold text-xs">
+                ${idx + 1}
+              </span>
+              <div>
+                <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                  ${schedule.date} • ${schedule.dayOfWeekName}
+                  ${isToday ? '<span class="text-[10px] bg-brand-500/20 text-brand-400 px-1.5 py-0.5 rounded font-bold">BUGÜN</span>' : ''}
+                </h4>
+                <p class="text-[10px] text-slate-400">${filteredDayVideos.length} Video • ${totalDurationStr}</p>
+              </div>
+            </div>
+
+            <span class="text-xs font-bold ${isAllDone ? 'text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20' : 'text-slate-400'}">
+              ${completedCount} / ${filteredDayVideos.length}
+            </span>
+          </div>
+
+          <!-- Day's Videos List -->
+          <div class="space-y-2">
+            ${filteredDayVideos.map(video => {
+              const subj = SUBJECTS.find(s => s.id === video.subjectId) || { name: 'Ders', color: '#6366f1', icon: 'fa-book' };
+              const vDone = video.isCompleted;
+              return `
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-darkBorder/60 hover:border-darkBorder transition text-xs">
+                  <div class="flex items-center gap-2 min-w-0 pr-2">
+                    <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${subj.color}"></span>
+                    <span class="${vDone ? 'completed-text text-slate-400' : 'text-slate-200'} truncate font-medium">
+                      ${video.title}
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-[11px] text-slate-400">${YouTubeService.formatDuration(video.durationSeconds)}</span>
+                    <input type="checkbox" ${vDone ? 'checked' : ''} 
+                           onchange="AppUI.toggleVideo('${video.id}', this.checked)"
+                           class="w-4 h-4 rounded text-emerald-600 bg-slate-800 border-slate-700 cursor-pointer">
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  // ==========================================================================
+  // TAB 3: İLERLEME (PROGRESS & SUBJECT ANALYTICS)
+  // ==========================================================================
+  renderProgressView() {
+    const allVideos = StorageService.getVideos();
+    const container = document.getElementById('topicProgressContainer');
+    const badge = document.getElementById('overallPercentageBadge');
+    const bar = document.getElementById('overallProgressBar');
+    const compVideosLabel = document.getElementById('metricCompletedVideos');
+    const remDurLabel = document.getElementById('metricRemainingDuration');
+    const totDurLabel = document.getElementById('metricTotalDuration');
+    const subtitle = document.getElementById('progressCourseSubtitle');
+
+    if (allVideos.length === 0) {
+      if (badge) badge.textContent = '%0';
+      if (bar) bar.style.width = '0%';
+      if (compVideosLabel) compVideosLabel.textContent = '0 / 0';
+      if (remDurLabel) remDurLabel.textContent = '0 sa';
+      if (totDurLabel) totDurLabel.textContent = '0 sa';
+      if (subtitle) subtitle.textContent = 'Henüz ders yüklenmedi';
+      if (container) {
+        container.innerHTML = `
+          <div class="text-center py-8 text-xs text-slate-400 bg-darkSurface/50 rounded-2xl border border-dashed border-darkBorder">
+            İlerleme grafiği için önce ders ekleyin veya hazır müfredatı yükleyin.
+          </div>
+        `;
+      }
+      return;
+    }
+
+    const totalCount = allVideos.length;
+    const completedCount = allVideos.filter(v => v.isCompleted).length;
+    const overallPct = Math.round((completedCount / totalCount) * 100);
+
+    const totalSeconds = allVideos.reduce((acc, v) => acc + v.durationSeconds, 0);
+    const completedSeconds = allVideos.filter(v => v.isCompleted).reduce((acc, v) => acc + v.durationSeconds, 0);
+    const remSeconds = Math.max(0, totalSeconds - completedSeconds);
+
+    if (badge) badge.textContent = `%${overallPct}`;
+    if (bar) bar.style.width = `${overallPct}%`;
+    if (compVideosLabel) compVideosLabel.textContent = `${completedCount} / ${totalCount}`;
+    if (remDurLabel) remDurLabel.textContent = YouTubeService.formatDuration(remSeconds);
+    if (totDurLabel) totDurLabel.textContent = YouTubeService.formatDuration(totalSeconds);
+    if (subtitle) subtitle.textContent = `Toplam ${SUBJECTS.length} Ders • ${totalCount} Video`;
+
+    // Render Progress per Subject (AGS 6 ders + YDS 1 ders)
+    if (container) {
+      container.innerHTML = SUBJECTS.map(subject => {
+        const subVideos = allVideos.filter(v => v.subjectId === subject.id);
+        const subTotal = subVideos.length;
+
+        if (subTotal === 0) {
+          return `
+            <div class="bg-darkSurface border border-darkBorder rounded-2xl p-4 shadow-lg opacity-75">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="w-8 h-8 rounded-xl flex items-center justify-center text-sm" style="background-color: ${subject.bgColor}; color: ${subject.color}">
+                    <i class="fa-solid ${subject.icon}"></i>
+                  </span>
+                  <div>
+                    <h4 class="text-xs font-bold text-white">${subject.name}</h4>
+                    <p class="text-[10px] text-slate-400">${subject.badge}</p>
+                  </div>
+                </div>
+                <button onclick="AppUI.switchTab('tab-subjects')" class="text-[11px] text-brand-400 hover:underline">
+                  + Liste Ekle
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-500 italic">Bu derse henüz oynatma listesi eklenmedi.</p>
+            </div>
+          `;
+        }
+
+        const subDone = subVideos.filter(v => v.isCompleted).length;
+        const subPct = Math.round((subDone / subTotal) * 100);
+        const subDuration = subVideos.reduce((acc, v) => acc + v.durationSeconds, 0);
+        const subRemDur = subVideos.filter(v => !v.isCompleted).reduce((acc, v) => acc + v.durationSeconds, 0);
+
+        return `
+          <div class="bg-darkSurface border border-darkBorder hover:border-brand-500/40 rounded-2xl p-4 shadow-lg space-y-3 transition">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <span class="w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-md" style="background-color: ${subject.bgColor}; color: ${subject.color}; border: 1px solid ${subject.borderColor}">
+                  <i class="fa-solid ${subject.icon}"></i>
+                </span>
+                <div>
+                  <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                    ${subject.name}
+                    <span class="subject-badge" style="background-color: ${subject.bgColor}; color: ${subject.color}">
+                      ${subject.badge}
+                    </span>
+                  </h4>
+                  <p class="text-[10px] text-slate-400">
+                    ${subDone}/${subTotal} Video • Kalan: ${YouTubeService.formatDuration(subRemDur)}
+                  </p>
+                </div>
+              </div>
+              <span class="text-base font-black" style="color: ${subject.color}">%${subPct}</span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500" style="width: ${subPct}%; background-color: ${subject.color}"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  },
+
+  // ==========================================================================
+  // TAB 4: DERSLER & OYNATMA LİSTELERİ (SUBJECTS & PLAYLIST MANAGEMENT)
+  // ==========================================================================
+  renderSubjectsView() {
+    const container = document.getElementById('subjectsGridContainer');
+    if (!container) return;
+
+    const allPlaylists = StorageService.getPlaylists();
+    const allVideos = StorageService.getVideos();
+
+    container.innerHTML = SUBJECTS.map(subject => {
+      const playlist = allPlaylists.find(p => p.subjectId === subject.id);
+      const subVideos = allVideos.filter(v => v.subjectId === subject.id);
+      const completed = subVideos.filter(v => v.isCompleted).length;
+      const totalDur = subVideos.reduce((acc, v) => acc + v.durationSeconds, 0);
+
+      const hasContent = subVideos.length > 0;
+
+      return `
+        <div class="bg-darkSurface border border-darkBorder hover:border-brand-500/40 rounded-2xl p-4 shadow-xl transition space-y-3">
+          <!-- Card Header -->
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0 shadow-md"
+                   style="background-color: ${subject.bgColor}; color: ${subject.color}; border: 1px solid ${subject.borderColor}">
+                <i class="fa-solid ${subject.icon}"></i>
+              </div>
+              <div>
+                <span class="subject-badge inline-block mb-0.5" style="background-color: ${subject.bgColor}; color: ${subject.color}">
+                  ${subject.badge}
+                </span>
+                <h3 class="text-sm font-bold text-white">${subject.name}</h3>
+                <p class="text-[11px] text-slate-400 line-clamp-1">${subject.desc}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Content Status -->
+          ${hasContent ? `
+            <div class="bg-slate-900/80 rounded-xl p-3 border border-darkBorder/60 flex items-center justify-between text-xs">
+              <div>
+                <p class="font-bold text-slate-200 line-clamp-1">${playlist ? playlist.title : 'Oynatma Listesi'}</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">
+                  <i class="fa-solid fa-film text-brand-400 mr-1"></i>${subVideos.length} Video • 
+                  <i class="fa-solid fa-clock text-brand-400 mx-1"></i>${YouTubeService.formatDuration(totalDur)}
+                </p>
+              </div>
+              <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">
+                ${completed}/${subVideos.length}
+              </span>
+            </div>
+          ` : `
+            <div class="bg-slate-900/40 rounded-xl p-3 border border-dashed border-darkBorder/80 text-center">
+              <p class="text-xs text-slate-400">Henüz YouTube listesi bağlanmadı</p>
+            </div>
+          `}
+
+          <!-- Action Button -->
+          <button onclick="AppUI.openAddPlaylistForSubject('${subject.id}')"
+                  class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-darkBorder text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5">
+            <i class="fa-brands fa-youtube text-red-500"></i>
+            <span>${hasContent ? 'Oynatma Listesini Değiştir / Güncelle' : 'YouTube Oynatma Listesi Ekle'}</span>
+          </button>
+        </div>
+      `;
+    }).join('');
+  },
+
+  openAddPlaylistForSubject(subjectId) {
+    const select = document.getElementById('playlistSubjectSelect');
+    if (select) select.value = subjectId;
+
+    // Scroll to import card
+    const importCard = document.getElementById('playlistImportCard');
+    if (importCard) {
+      importCard.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('playlistUrlInput')?.focus();
+    }
+  },
+
+  // ==========================================================================
+  // TAB 5: AYARLAR (SETTINGS VIEW)
+  // ==========================================================================
+  renderSettingsView() {
+    ThemeManager.applyTheme(ThemeManager.getTheme());
+    LayoutManager.applyLayout(LayoutManager.getLayout());
+  },
+
+  // Import Playlist Handler
+  async handleImportPlaylist() {
+    const input = document.getElementById('playlistUrlInput');
+    const select = document.getElementById('playlistSubjectSelect');
+    const btn = document.getElementById('importPlaylistBtn');
+
+    const url = input?.value.trim();
+    const subjectId = select?.value || 'egitim-bilimleri';
+
+    if (!url) {
+      this.showToast('Lütfen bir YouTube oynatma listesi linki veya ID girin.', 'warning');
+      return;
+    }
+
+    try {
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Çekiliyor...`;
+
+      const settings = StorageService.getSettings();
+      const result = await YouTubeService.fetchPlaylist(url, subjectId, settings.apiKey);
+
+      StorageService.savePlaylist(result.playlist);
+      StorageService.saveVideos(subjectId, result.videos);
+
+      // Auto reschedule all videos
+      const allVideos = StorageService.getVideos();
+      const schedules = SmartSchedulingEngine.generateSchedule(
+        allVideos,
+        settings.dailyCapacityMinutes,
+        settings.selectedDays,
+        settings.startDate
+      );
+      StorageService.saveSchedules(schedules);
+
+      const targetSubject = SUBJECTS.find(s => s.id === subjectId);
+      this.showToast(`"${targetSubject?.name}" için ${result.videos.length} video eklendi!`, 'success');
+      input.value = '';
+      this.switchTab('tab-today');
+    } catch (err) {
+      this.showToast(err.message || 'Oynatma listesi yüklenemedi.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-down mr-1.5"></i><span>Listeyi Derse Bağla</span>`;
+    }
+  },
+
+  // Load Full AGS + YDS Curriculum
+  handleLoadFullCurriculum() {
+    const full = YouTubeService.getFullAgsAndYdsCurriculum();
+
+    // Save all playlists
+    full.playlists.forEach(pl => StorageService.savePlaylist(pl));
+
+    // Save all videos in bulk
+    localStorage.setItem(StorageService.KEYS.VIDEOS, JSON.stringify(full.videos));
+
+    // Generate schedule
+    const settings = StorageService.getSettings();
+    const schedules = SmartSchedulingEngine.generateSchedule(
+      full.videos,
+      settings.dailyCapacityMinutes,
+      settings.selectedDays,
+      settings.startDate
+    );
+    StorageService.saveSchedules(schedules);
+
+    this.showToast(`AGS + YDS Müfredat Paketi Yüklendi! (7 Ders, ${full.videos.length} Video)`, 'success');
+    this.switchTab('tab-today');
+  },
+
+  // Generate / Regenerate Schedule
+  handleGenerateSchedule() {
+    const videos = StorageService.getVideos();
+    if (videos.length === 0) {
+      this.showToast('Program oluşturmak için önce ders ekleyin veya hazır paketi yükleyin.', 'warning');
+      this.switchTab('tab-subjects');
+      return;
+    }
+
+    const settings = StorageService.getSettings();
+    const schedules = SmartSchedulingEngine.generateSchedule(
+      videos,
+      settings.dailyCapacityMinutes,
+      settings.selectedDays,
+      settings.startDate
+    );
+
+    StorageService.saveSchedules(schedules);
+    this.showToast(`Akıllı program güncellendi! (${schedules.length} Gün)`, 'success');
+    this.render();
+  },
+
+  // Video Player Modal
   openVideoModal(videoId, title) {
     const modal = document.getElementById('videoModal');
     const iframe = document.getElementById('videoIframe');
     const modalTitle = document.getElementById('videoModalTitle');
 
     if (modal && iframe) {
-      modalTitle.textContent = title;
+      if (modalTitle) modalTitle.textContent = title;
       iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
       modal.classList.remove('hidden');
     }
@@ -1164,96 +1779,6 @@ const AppUI = {
       iframe.src = '';
       modal.classList.add('hidden');
     }
-  },
-
-  // Import Playlist Handler
-  async handleImportPlaylist() {
-    const input = document.getElementById('playlistUrlInput');
-    const btn = document.getElementById('importPlaylistBtn');
-    const url = input?.value.trim();
-
-    if (!url) {
-      this.showToast('Lütfen bir YouTube linki veya ID girin.', 'warning');
-      return;
-    }
-
-    try {
-      btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> İçe Aktarılıyor...`;
-
-      const settings = StorageService.getSettings();
-      const result = await YouTubeService.fetchPlaylist(url, settings.apiKey);
-
-      StorageService.savePlaylist(result.playlist);
-      StorageService.saveVideos(result.playlist.id, result.videos);
-      StorageService.setActivePlaylist(result.playlist.id);
-
-      // Auto generate initial schedule
-      const schedules = SmartSchedulingEngine.generateSchedule(
-        result.videos,
-        settings.dailyCapacityMinutes,
-        settings.selectedDays,
-        settings.startDate
-      );
-      StorageService.saveSchedules(result.playlist.id, schedules);
-
-      this.showToast(`"${result.playlist.title}" içe aktarıldı! (${result.videos.length} ders)`, 'success');
-      input.value = '';
-      this.switchTab('tab-today');
-    } catch (err) {
-      this.showToast(err.message || 'Oynatma listesi yüklenemedi.', 'error');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-down"></i> <span>Listeyi İçe Aktar</span>`;
-    }
-  },
-
-  // Load Sample Course Handler
-  handleLoadSampleCourse() {
-    const sample = YouTubeService.getSampleEnglishCurriculum();
-    StorageService.savePlaylist(sample.playlist);
-    StorageService.saveVideos(sample.playlist.id, sample.videos);
-    StorageService.setActivePlaylist(sample.playlist.id);
-
-    const settings = StorageService.getSettings();
-    const schedules = SmartSchedulingEngine.generateSchedule(
-      sample.videos,
-      settings.dailyCapacityMinutes,
-      settings.selectedDays,
-      settings.startDate
-    );
-    StorageService.saveSchedules(sample.playlist.id, schedules);
-
-    this.showToast('Örnek İngilizce kursu yüklendi! (16 Ders)', 'success');
-    this.switchTab('tab-today');
-  },
-
-  // Generate / Regenerate Schedule
-  handleGenerateSchedule() {
-    const active = StorageService.getActivePlaylist();
-    if (!active) {
-      this.showToast('Önce bir oynatma listesi içe aktarın.', 'warning');
-      this.switchTab('tab-playlist');
-      return;
-    }
-
-    const videos = StorageService.getVideos(active.id);
-    if (videos.length === 0) {
-      this.showToast('Listede video bulunamadı.', 'warning');
-      return;
-    }
-
-    const settings = StorageService.getSettings();
-    const schedules = SmartSchedulingEngine.generateSchedule(
-      videos,
-      settings.dailyCapacityMinutes,
-      settings.selectedDays,
-      settings.startDate
-    );
-
-    StorageService.saveSchedules(active.id, schedules);
-    this.showToast(`Akıllı program oluşturuldu! (${schedules.length} Gün)`, 'success');
-    this.render();
   },
 
   // Toast System
@@ -1294,7 +1819,7 @@ if (typeof document !== 'undefined') {
   });
 }
 
-// Export for Node/test environments if present
+// Export for Node/test environments
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { StorageService, YouTubeService, SmartSchedulingEngine, AppUI };
+  module.exports = { SUBJECTS, ThemeManager, LayoutManager, StorageService, YouTubeService, SmartSchedulingEngine, AppUI };
 }

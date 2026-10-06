@@ -1,15 +1,59 @@
-/* Custom Styles & Mobile App Optimization */
+/* ==========================================================================
+   Ders Takip - Style & Theme Engine
+   Supports: AMOLED Pure Black (#000000), Light Mode, Phone & Tablet Layouts
+   ========================================================================== */
 
 :root {
-  --primary: #4338ca;
+  --primary: #4f46e5;
   --primary-light: #6366f1;
+  --primary-dark: #3730a3;
   --secondary: #059669;
   --accent: #f59e0b;
-  --bg-dark: #0f172a;
-  --surface-dark: #1e293b;
-  --border-dark: #334155;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
+
+  /* AMOLED Default Variables (Strict 100% Black) */
+  --bg-main: #000000;
+  --surface-main: #070709;
+  --surface-card: #0e0e13;
+  --surface-elevated: #15151b;
+  --border-main: #1f1f26;
+  --border-sub: #17171d;
+  --text-main: #ffffff;
+  --text-sub: #a1a1aa;
+  --text-muted: #71717a;
+  --nav-bg: rgba(0, 0, 0, 0.95);
+  --input-bg: #050507;
+}
+
+/* Light Theme Variables */
+html.theme-light {
+  --bg-main: #f8fafc;
+  --surface-main: #ffffff;
+  --surface-card: #f8fafc;
+  --surface-elevated: #f1f5f9;
+  --border-main: #e2e8f0;
+  --border-sub: #cbd5e1;
+  --text-main: #0f172a;
+  --text-sub: #475569;
+  --text-muted: #64748b;
+  --nav-bg: rgba(255, 255, 255, 0.96);
+  --input-bg: #f1f5f9;
+}
+
+/* AMOLED Strict Theme (Pure 100% #000000) */
+html.theme-amoled {
+  --bg-main: #000000;
+  --surface-main: #070709;
+  --surface-card: #0e0e13;
+  --surface-elevated: #15151b;
+  --border-main: #1f1f26;
+  --border-sub: #17171d;
+  --text-main: #ffffff;
+  --text-sub: #a1a1aa;
+  --text-muted: #71717a;
+  --nav-bg: rgba(0, 0, 0, 0.98);
+  --input-bg: #050507;
 }
 
 * {
@@ -19,14 +63,145 @@
 
 body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg-main) !important;
+  color: var(--text-main);
   padding-top: var(--safe-top);
-  padding-bottom: calc(74px + var(--safe-bottom));
+  padding-bottom: calc(76px + var(--safe-bottom));
   overscroll-behavior-y: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* iOS & Mobile Web App Feel */
-button, a, input, select {
-  touch-action: manipulation;
+/* Base class overrides for AMOLED (#000000) */
+html.theme-amoled body,
+html.theme-amoled .bg-darkBg {
+  background-color: #000000 !important;
+}
+
+html.theme-amoled .bg-darkSurface {
+  background-color: #08080b !important;
+  border-color: #1a1a22 !important;
+}
+
+html.theme-amoled .bg-slate-900 {
+  background-color: #040406 !important;
+  border-color: #17171d !important;
+}
+
+html.theme-amoled .bg-slate-800 {
+  background-color: #101015 !important;
+  border-color: #1f1f28 !important;
+}
+
+html.theme-amoled .border-darkBorder {
+  border-color: #1c1c24 !important;
+}
+
+html.theme-amoled .header-bar,
+html.theme-amoled .bottom-nav {
+  background-color: rgba(0, 0, 0, 0.96) !important;
+  border-color: #1a1a22 !important;
+}
+
+/* Light Theme Overrides */
+html.theme-light body,
+html.theme-light .bg-darkBg {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html.theme-light .bg-darkSurface {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+html.theme-light .bg-slate-900 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html.theme-light .bg-slate-800 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+html.theme-light .text-white {
+  color: #0f172a !important;
+}
+
+html.theme-light .text-slate-100 {
+  color: #0f172a !important;
+}
+
+html.theme-light .text-slate-200 {
+  color: #1e293b !important;
+}
+
+html.theme-light .text-slate-300 {
+  color: #334155 !important;
+}
+
+html.theme-light .text-slate-400 {
+  color: #64748b !important;
+}
+
+html.theme-light .border-darkBorder {
+  border-color: #e2e8f0 !important;
+}
+
+html.theme-light .header-bar,
+html.theme-light .bottom-nav {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.theme-light input,
+html.theme-light select,
+html.theme-light textarea {
+  color: #0f172a !important;
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Layout Modes */
+body.view-phone .app-container {
+  max-width: 28rem !important; /* 448px */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+body.view-phone .nav-container,
+body.view-phone .header-container {
+  max-width: 28rem !important;
+}
+
+body.view-tablet .app-container {
+  max-width: 68rem !important; /* ~1088px */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+body.view-tablet .nav-container,
+body.view-tablet .header-container {
+  max-width: 68rem !important;
+}
+
+body.view-tablet .tablet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+body.view-tablet .tablet-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+body.view-tablet .tablet-full-width {
+  grid-column: 1 / -1;
 }
 
 /* Custom Scrollbars */
@@ -38,23 +213,24 @@ button, a, input, select {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.25);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(148, 163, 184, 0.45);
 }
 
-/* Bottom Nav bar with Safe Area */
+/* Bottom Nav bar */
 .bottom-nav {
   padding-bottom: var(--safe-bottom);
+  border-top-width: 1px;
 }
 
 /* Animations */
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -70,7 +246,7 @@ button, a, input, select {
 @keyframes scaleUp {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.96);
   }
   to {
     opacity: 1;
@@ -79,36 +255,51 @@ button, a, input, select {
 }
 
 .animate-slide-up {
-  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.2s ease-out forwards;
+  animation: fadeIn 0.18s ease-out forwards;
 }
 
 .animate-scale-up {
-  animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Custom Checkbox Animation */
+/* Custom Checkbox */
 .lesson-checkbox:checked + div {
   border-color: #059669;
   background-color: #059669;
 }
 
-/* Line-through animation on complete */
 .completed-text {
   text-decoration: line-through;
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 /* Range input styling */
 input[type="range"] {
-  accent-color: #4338ca;
+  accent-color: #4f46e5;
 }
 
 /* Modal Backdrop Blur */
 .modal-backdrop {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Subject Chips */
+.subject-chip.active {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+  border-color: #6366f1 !important;
+}
+
+.subject-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
 }
