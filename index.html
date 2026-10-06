@@ -78,23 +78,22 @@
 
       <!-- Quick Action Controls -->
       <div class="flex items-center space-x-2">
-        <!-- PWA Install Button -->
         <button id="pwaInstallBtn" class="hidden text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-1.5 rounded-xl font-bold hover:bg-emerald-500/30 transition flex items-center gap-1 border border-emerald-500/30">
           <i class="fa-solid fa-download"></i>
           <span class="hidden sm:inline">Yükle</span>
         </button>
 
-        <!-- Quick Theme Toggle (Gündüz / Tam AMOLED Siyah) -->
+        <!-- Quick Theme Toggle -->
         <button id="quickThemeToggleBtn" class="w-8 h-8 rounded-xl bg-slate-800 text-amber-400 hover:bg-slate-700 flex items-center justify-center transition border border-darkBorder" title="Gündüz / Gece Modu Değiştir">
           <i class="fa-solid fa-sun text-sm"></i>
         </button>
 
-        <!-- Quick Layout Toggle (Telefon / Tablet Modu) -->
+        <!-- Quick Layout Toggle -->
         <button id="quickLayoutToggleBtn" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center justify-center transition border border-darkBorder" title="Telefon / Tablet Modu Değiştir">
           <i class="fa-solid fa-tablet-screen-button text-sm"></i>
         </button>
 
-        <!-- Direct Settings Nav -->
+        <!-- Settings Nav -->
         <button onclick="AppUI.switchTab('tab-settings')" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center justify-center transition border border-darkBorder" title="Ayarlar">
           <i class="fa-solid fa-gear text-sm"></i>
         </button>
@@ -111,7 +110,6 @@
     <!-- TAB 1: BUGÜN (TODAY VIEW) -->
     <!-- ======================================================== -->
     <section id="tab-today" class="tab-content space-y-4 animate-fade-in">
-      <!-- Date Banner -->
       <div class="flex items-center justify-between">
         <div>
           <p class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Bugünün Hedefi</p>
@@ -122,17 +120,14 @@
         </div>
       </div>
 
-      <!-- Subject Filter Chips (Horizontal Scroll) -->
+      <!-- Subject Filter Chips -->
       <div>
         <p class="text-[11px] text-slate-400 mb-1.5 font-semibold">Ders Filtresi:</p>
-        <div id="todaySubjectFilterContainer" class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          <!-- Injected via app.js -->
-        </div>
+        <div id="todaySubjectFilterContainer" class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none"></div>
       </div>
 
-      <!-- Tablet Grid for Today Section -->
+      <!-- Tablet Grid -->
       <div class="tablet-grid">
-        <!-- Left: Progress Summary Card -->
         <div class="space-y-4">
           <div class="bg-darkSurface border border-darkBorder rounded-2xl p-4 shadow-xl space-y-3">
             <div class="flex justify-between items-center text-xs text-slate-400">
@@ -140,7 +135,6 @@
               <span id="todayDurationLabel" class="font-bold text-slate-200">0 dk</span>
             </div>
 
-            <!-- Progress Bar -->
             <div class="w-full bg-slate-800 rounded-full h-3 p-0.5 overflow-hidden">
               <div id="todayProgressBar" class="bg-gradient-to-r from-brand-600 to-emerald-500 h-full rounded-full transition-all duration-500 w-0"></div>
             </div>
@@ -154,7 +148,7 @@
             </div>
           </div>
 
-          <!-- Celebration Banner (Shown when 100% completed) -->
+          <!-- Celebration Banner -->
           <div id="todayCelebrationBanner" class="hidden bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-4 animate-scale-up">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl shrink-0">
@@ -162,36 +156,30 @@
               </div>
               <div>
                 <h4 class="text-xs font-bold text-emerald-400">Tebrikler! 🎉</h4>
-                <p class="text-[11px] text-slate-300">Bugünün tüm ders hedeflerini başarıyla tamamladınız. Harika bir çalışma ritmi!</p>
+                <p class="text-[11px] text-slate-300">Bugünün tüm ders hedeflerini tamamladınız. Mükemmel bir çalışma!</p>
               </div>
             </div>
           </div>
 
-          <!-- Quick Tip Card -->
           <div class="hidden sm:block bg-darkSurface/60 border border-darkBorder rounded-2xl p-3.5 text-xs text-slate-400">
             <div class="flex items-center gap-2 text-slate-300 font-bold mb-1">
               <i class="fa-solid fa-lightbulb text-amber-400"></i>
               <span>Çalışma İpucu</span>
             </div>
             <p class="text-[11px] leading-relaxed">
-              Her video dersini tamamladıktan sonra ilgili onay kutusunu işaretleyin. İlerlemeniz anında kaydedilir ve grafikler güncellenir.
+              Her video dersini tamamladıktan sonra ilgili kutucuğu işaretleyin. Günlük ilerlemeniz anında kaydedilir ve grafikler güncellenir.
             </p>
           </div>
         </div>
 
-        <!-- Right: Today's Video Lessons List -->
         <div class="space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-300">Bugünkü Dersler</h3>
             <span id="todayItemCountBadge" class="text-[11px] bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full border border-darkBorder font-semibold">0 Ders</span>
           </div>
 
-          <!-- Lesson Cards Container -->
-          <div id="todayVideoList" class="space-y-2.5">
-            <!-- Injected via app.js -->
-          </div>
+          <div id="todayVideoList" class="space-y-2.5"></div>
 
-          <!-- Empty State -->
           <div id="todayEmptyState" class="hidden text-center py-10 px-4 bg-darkSurface/50 border border-dashed border-darkBorder rounded-2xl space-y-3">
             <div class="w-14 h-14 rounded-2xl bg-slate-800 text-brand-400 flex items-center justify-center text-2xl mx-auto">
               <i class="fa-regular fa-calendar-check"></i>
@@ -227,9 +215,7 @@
       </div>
 
       <div class="tablet-grid">
-        <!-- Configuration Card -->
         <div class="bg-darkSurface border border-darkBorder rounded-2xl p-4 shadow-xl space-y-4">
-          <!-- Capacity Slider -->
           <div>
             <div class="flex justify-between items-center mb-1.5">
               <label for="capacityRange" class="text-xs font-bold text-slate-300">Günlük Çalışma Süresi</label>
@@ -237,7 +223,6 @@
             </div>
             <input type="range" id="capacityRange" min="15" max="300" step="15" value="120" class="w-full cursor-pointer h-2 bg-slate-800 rounded-lg">
             
-            <!-- Preset Chips -->
             <div class="flex flex-wrap gap-1.5 mt-2.5">
               <button type="button" onclick="AppUI.setCapacity(30)" class="capacity-chip text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-darkBorder">30 dk</button>
               <button type="button" onclick="AppUI.setCapacity(45)" class="capacity-chip text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-darkBorder">45 dk</button>
@@ -248,59 +233,39 @@
             </div>
           </div>
 
-          <!-- Weekly Days Selector -->
           <div>
             <label class="block text-xs font-bold text-slate-300 mb-1">Haftalık Çalışma Günleri</label>
             <p class="text-[11px] text-slate-400 mb-2">Videolar yalnızca seçilen günlere programlanır.</p>
             <div class="grid grid-cols-7 gap-1.5" id="dayPickerContainer">
-              <button type="button" data-day="1" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-brand-600 text-white border-brand-500">
-                <span>Pzt</span>
-              </button>
-              <button type="button" data-day="2" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-brand-600 text-white border-brand-500">
-                <span>Sal</span>
-              </button>
-              <button type="button" data-day="3" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-brand-600 text-white border-brand-500">
-                <span>Çar</span>
-              </button>
-              <button type="button" data-day="4" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-brand-600 text-white border-brand-500">
-                <span>Per</span>
-              </button>
-              <button type="button" data-day="5" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-brand-600 text-white border-brand-500">
-                <span>Cum</span>
-              </button>
-              <button type="button" data-day="6" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-slate-800 text-slate-400 border-darkBorder">
-                <span>Cmt</span>
-              </button>
-              <button type="button" data-day="7" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-slate-800 text-slate-400 border-darkBorder">
-                <span>Paz</span>
-              </button>
+              <button type="button" data-day="1" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-brand-600 text-white border-brand-500"><span>Pzt</span></button>
+              <button type="button" data-day="2" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-brand-600 text-white border-brand-500"><span>Sal</span></button>
+              <button type="button" data-day="3" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-brand-600 text-white border-brand-500"><span>Çar</span></button>
+              <button type="button" data-day="4" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-brand-600 text-white border-brand-500"><span>Per</span></button>
+              <button type="button" data-day="5" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-brand-600 text-white border-brand-500"><span>Cum</span></button>
+              <button type="button" data-day="6" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-slate-800 text-slate-400 border-darkBorder"><span>Cmt</span></button>
+              <button type="button" data-day="7" class="day-btn h-10 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center bg-slate-800 text-slate-400 border-darkBorder"><span>Paz</span></button>
             </div>
           </div>
 
-          <!-- Start Date -->
           <div>
             <label for="startDateInput" class="block text-xs font-bold text-slate-300 mb-1">Başlangıç Tarihi</label>
             <input type="date" id="startDateInput" class="w-full bg-slate-900 border border-darkBorder rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500">
           </div>
 
-          <!-- Bin-Packing Rule Reminder -->
           <div class="bg-slate-900/60 rounded-xl p-3 border border-darkBorder/60 flex items-start gap-2.5">
             <i class="fa-solid fa-shield-halved text-brand-400 text-sm mt-0.5 shrink-0"></i>
             <p class="text-[11px] text-slate-400 leading-relaxed">
-              <strong class="text-slate-300">Video Bölünmez Kuralı:</strong> Bir video günlük süreyi tek başına aşmadıkça asla günlere bölünmez. Konu bütünlüğü korunarak pedagojik sırayla sepetlere yerleştirilir.
+              <strong class="text-slate-300">Video Bölünmez Kuralı:</strong> Bir video günlük süreyi tek başına aşmadıkça asla günlere bölünmez. Konu bütünlüğü korunur.
             </p>
           </div>
 
-          <!-- Generate Button -->
           <button id="generateScheduleBtn" class="w-full py-3 bg-gradient-to-r from-brand-700 to-brand-500 hover:from-brand-600 hover:to-brand-400 text-white text-xs font-bold rounded-xl shadow-lg shadow-brand-600/20 transition flex items-center justify-center gap-2">
             <i class="fa-solid fa-wand-magic-sparkles"></i>
             <span>Akıllı Takvimi Oluştur / Yenile</span>
           </button>
         </div>
 
-        <!-- Right: Summary & Timeline Container -->
         <div class="space-y-3">
-          <!-- Summary Card -->
           <div id="scheduleSummaryCard" class="hidden bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4">
             <div class="grid grid-cols-3 gap-2 text-center">
               <div>
@@ -318,20 +283,14 @@
             </div>
           </div>
 
-          <!-- Subject Filter Chips in Schedule -->
           <div>
             <p class="text-[11px] text-slate-400 mb-1.5 font-semibold">Takvimde Gösterilecek Ders:</p>
-            <div id="scheduleSubjectFilterContainer" class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-              <!-- Injected via app.js -->
-            </div>
+            <div id="scheduleSubjectFilterContainer" class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none"></div>
           </div>
 
-          <!-- Timeline Days List -->
           <div class="space-y-2 pt-1">
             <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-300">Planlanan Günler</h3>
-            <div id="scheduleTimelineContainer" class="space-y-3">
-              <!-- Timeline cards injected via app.js -->
-            </div>
+            <div id="scheduleTimelineContainer" class="space-y-3"></div>
           </div>
         </div>
       </div>
@@ -347,7 +306,6 @@
         <h2 class="text-lg sm:text-xl font-extrabold text-white">AGS &amp; YDS İlerleme Durumu</h2>
       </div>
 
-      <!-- General Course Progress Card -->
       <div class="bg-darkSurface border border-darkBorder rounded-2xl p-5 shadow-xl">
         <div class="flex items-center justify-between mb-4">
           <div>
@@ -361,7 +319,6 @@
           <div id="overallProgressBar" class="bg-gradient-to-r from-brand-600 via-indigo-500 to-emerald-500 h-full rounded-full transition-all duration-500 w-0"></div>
         </div>
 
-        <!-- Metric Grid -->
         <div class="grid grid-cols-3 gap-2 text-center pt-3 border-t border-darkBorder">
           <div>
             <i class="fa-solid fa-circle-check text-emerald-400 text-sm mb-1"></i>
@@ -381,16 +338,13 @@
         </div>
       </div>
 
-      <!-- Topics / Lessons Breakdown Section -->
       <div class="space-y-3 pt-1">
         <div class="flex items-center justify-between">
           <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-300">Ders Bazlı Detaylı İlerleme</h3>
           <span class="text-[11px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-darkBorder font-semibold">7 Ayrı Ders</span>
         </div>
 
-        <div id="topicProgressContainer" class="space-y-3">
-          <!-- Injected via app.js -->
-        </div>
+        <div id="topicProgressContainer" class="space-y-3"></div>
       </div>
     </section>
 
@@ -411,8 +365,8 @@
             <i class="fa-solid fa-wand-magic-sparkles"></i>
           </div>
           <div>
-            <h4 class="text-xs font-bold text-white">AGS &amp; YDS Örnek Ders Paketi (Tavsiye Edilen)</h4>
-            <p class="text-[11px] text-slate-400">7 dersin tümü için hazırlanmış 53 videoluk kapsamlı seti tek tıkla yükleyin.</p>
+            <h4 class="text-xs font-bold text-white">AGS &amp; YDS Örnek Ders Paketi (53 Video)</h4>
+            <p class="text-[11px] text-slate-400">7 dersin tümü için hazırlanmış tam seti tek tıkla yükleyip hemen başlayın.</p>
           </div>
         </div>
         <button id="loadSampleCurriculumBtn" class="shrink-0 w-full sm:w-auto px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-brand-600/20 flex items-center justify-center gap-1.5">
@@ -423,21 +377,23 @@
 
       <!-- URL Input & Playlist Binding Card -->
       <div id="playlistImportCard" class="bg-darkSurface border border-darkBorder rounded-2xl p-4 shadow-xl space-y-3">
-        <h3 class="text-xs font-bold text-slate-200 flex items-center gap-2">
-          <i class="fa-brands fa-youtube text-red-500 text-sm"></i>
-          <span>YouTube Oynatma Listesi Bağla</span>
-        </h3>
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold text-slate-200 flex items-center gap-2">
+            <i class="fa-brands fa-youtube text-red-500 text-sm"></i>
+            <span>YouTube Oynatma Listesi Bağla</span>
+          </h3>
+          <button type="button" onclick="AppUI.openHelpModal()" class="text-[11px] text-brand-400 hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-circle-question"></i>
+            <span>Bağlantı Yardımı</span>
+          </button>
+        </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <!-- Subject Selector -->
           <div class="sm:col-span-1">
             <label for="playlistSubjectSelect" class="block text-[11px] font-bold text-slate-400 mb-1">Bağlanacak Ders</label>
-            <select id="playlistSubjectSelect" class="w-full bg-slate-900 border border-darkBorder rounded-xl px-2.5 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
-              <!-- Injected via app.js -->
-            </select>
+            <select id="playlistSubjectSelect" class="w-full bg-slate-900 border border-darkBorder rounded-xl px-2.5 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500"></select>
           </div>
 
-          <!-- URL Input -->
           <div class="sm:col-span-2">
             <label for="playlistUrlInput" class="block text-[11px] font-bold text-slate-400 mb-1">YouTube Liste URL veya ID'si</label>
             <div class="relative">
@@ -450,18 +406,23 @@
           </div>
         </div>
 
-        <button id="importPlaylistBtn" class="w-full py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-brand-600/20">
-          <i class="fa-solid fa-cloud-arrow-down mr-1"></i>
-          <span>Listeyi Derse Bağla</span>
-        </button>
+        <div class="flex flex-col sm:flex-row gap-2 pt-1">
+          <button id="importPlaylistBtn" class="flex-1 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg shadow-brand-600/20">
+            <i class="fa-solid fa-cloud-arrow-down mr-1"></i>
+            <span>Listeyi Derse Bağla</span>
+          </button>
+
+          <button type="button" onclick="AppUI.openCustomCreatorForSubject('egitim-bilimleri')" class="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-brand-300 border border-brand-500/30 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-bolt text-amber-400"></i>
+            <span>Hızlı Özel Liste Kur</span>
+          </button>
+        </div>
       </div>
 
       <!-- 7 Subjects Grid -->
       <div class="space-y-2 pt-1">
         <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-300">MEB-AGS ve YDS Dersleri</h3>
-        <div id="subjectsGridContainer" class="tablet-grid space-y-3 sm:space-y-0">
-          <!-- Injected via app.js -->
-        </div>
+        <div id="subjectsGridContainer" class="tablet-grid space-y-3 sm:space-y-0"></div>
       </div>
     </section>
 
@@ -476,7 +437,6 @@
       </div>
 
       <div class="tablet-grid">
-        <!-- Card 1: Theme & Display Modes -->
         <div class="bg-darkSurface border border-darkBorder rounded-2xl p-4 shadow-xl space-y-4">
           <h3 class="text-xs font-bold text-white flex items-center gap-2 border-b border-darkBorder pb-2">
             <i class="fa-solid fa-palette text-brand-400"></i>
@@ -484,7 +444,6 @@
           </h3>
 
           <div class="grid grid-cols-2 gap-2">
-            <!-- Light Theme Button -->
             <button type="button" data-theme="light" class="theme-selector-btn p-3 rounded-xl border border-darkBorder bg-slate-900 text-left transition flex flex-col justify-between">
               <div class="flex items-center justify-between mb-2">
                 <i class="fa-solid fa-sun text-amber-500 text-lg"></i>
@@ -496,7 +455,6 @@
               </div>
             </button>
 
-            <!-- AMOLED Pure Black Button -->
             <button type="button" data-theme="amoled" class="theme-selector-btn p-3 rounded-xl border border-darkBorder bg-black text-left transition flex flex-col justify-between ring-2 ring-brand-500">
               <div class="flex items-center justify-between mb-2">
                 <i class="fa-solid fa-moon text-indigo-400 text-lg"></i>
@@ -509,14 +467,12 @@
             </button>
           </div>
 
-          <!-- Layout Mode Selection (Tablet & Phone) -->
           <h3 class="text-xs font-bold text-white flex items-center gap-2 border-b border-darkBorder pb-2 pt-2">
             <i class="fa-solid fa-display text-brand-400"></i>
             <span>Cihaz &amp; Ekran Düzeni</span>
           </h3>
 
           <div class="grid grid-cols-2 gap-2">
-            <!-- Phone Mode -->
             <button type="button" data-layout="phone" class="layout-selector-btn p-3 rounded-xl border border-darkBorder bg-slate-900 text-left transition flex flex-col justify-between">
               <div class="flex items-center justify-between mb-2">
                 <i class="fa-solid fa-mobile-screen text-slate-300 text-lg"></i>
@@ -528,7 +484,6 @@
               </div>
             </button>
 
-            <!-- Tablet Mode -->
             <button type="button" data-layout="tablet" class="layout-selector-btn p-3 rounded-xl border border-darkBorder bg-slate-900 text-left transition flex flex-col justify-between ring-2 ring-brand-500">
               <div class="flex items-center justify-between mb-2">
                 <i class="fa-solid fa-tablet-screen-button text-brand-400 text-lg"></i>
@@ -542,14 +497,12 @@
           </div>
         </div>
 
-        <!-- Card 2: Curriculum & Data Management -->
         <div class="bg-darkSurface border border-darkBorder rounded-2xl p-4 shadow-xl space-y-4">
           <h3 class="text-xs font-bold text-white flex items-center gap-2 border-b border-darkBorder pb-2">
             <i class="fa-solid fa-database text-brand-400"></i>
             <span>Veri &amp; Müfredat Yönetimi</span>
           </h3>
 
-          <!-- Full Curriculum Button -->
           <div class="space-y-1">
             <p class="text-[11px] font-bold text-slate-300">Hazır AGS ve YDS Seti</p>
             <p class="text-[11px] text-slate-400">Tüm derslerin video listelerini tek hamlede yükleyin:</p>
@@ -559,12 +512,16 @@
             </button>
           </div>
 
-          <!-- API Key Input -->
           <div class="pt-2 border-t border-darkBorder space-y-1">
-            <label for="apiKeyInput" class="block text-[11px] font-bold text-slate-300">
-              YouTube Data API v3 Anahtarı (Opsiyonel)
-            </label>
-            <p class="text-[10px] text-slate-400">Özel Google API anahtarınız varsa girebilirsiniz:</p>
+            <div class="flex items-center justify-between">
+              <label for="apiKeyInput" class="block text-[11px] font-bold text-slate-300">
+                YouTube Data API v3 Anahtarı
+              </label>
+              <button type="button" onclick="AppUI.openHelpModal()" class="text-[10px] text-brand-400 hover:underline">
+                Nasıl Alınır?
+              </button>
+            </div>
+            <p class="text-[10px] text-slate-400">Google Cloud anahtarınız varsa girip sınırsız hızlı çekim yapabilirsiniz:</p>
             <div class="flex gap-2 mt-1">
               <input type="text" id="apiKeyInput" placeholder="AIzaSy..." class="flex-1 bg-slate-900 border border-darkBorder rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 font-mono">
               <button id="saveApiKeyBtn" class="py-2 px-3 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl transition">
@@ -573,7 +530,6 @@
             </div>
           </div>
 
-          <!-- Reset All Data -->
           <div class="pt-2 border-t border-darkBorder">
             <button id="resetAllDataBtn" class="w-full py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5">
               <i class="fa-solid fa-trash-can"></i>
@@ -587,41 +543,162 @@
   </main>
 
   <!-- ======================================================== -->
-  <!-- BOTTOM NAVIGATION BAR (APP SHELL) -->
+  <!-- BOTTOM NAVIGATION BAR -->
   <!-- ======================================================== -->
   <nav class="bottom-nav fixed bottom-0 left-0 right-0 z-50 bg-darkSurface/95 backdrop-blur-lg border-t border-darkBorder">
     <div class="nav-container max-w-5xl mx-auto grid grid-cols-5 px-2 py-2">
-      <!-- Tab 1: Bugün -->
       <button data-tab="tab-today" class="nav-item flex flex-col items-center justify-center py-1 text-brand-400 font-bold transition group">
         <i class="fa-solid fa-calendar-day text-base sm:text-lg mb-0.5 group-hover:scale-110 transition"></i>
         <span class="text-[10px] sm:text-[11px]">Bugün</span>
       </button>
 
-      <!-- Tab 2: Program -->
       <button data-tab="tab-schedule" class="nav-item flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-200 font-medium transition group">
         <i class="fa-solid fa-calendar-week text-base sm:text-lg mb-0.5 group-hover:scale-110 transition"></i>
         <span class="text-[10px] sm:text-[11px]">Program</span>
       </button>
 
-      <!-- Tab 3: İlerleme -->
       <button data-tab="tab-progress" class="nav-item flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-200 font-medium transition group">
         <i class="fa-solid fa-chart-pie text-base sm:text-lg mb-0.5 group-hover:scale-110 transition"></i>
         <span class="text-[10px] sm:text-[11px]">İlerleme</span>
       </button>
 
-      <!-- Tab 4: Dersler -->
       <button data-tab="tab-subjects" class="nav-item flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-200 font-medium transition group">
         <i class="fa-solid fa-book-bookmark text-base sm:text-lg mb-0.5 group-hover:scale-110 transition"></i>
         <span class="text-[10px] sm:text-[11px]">Dersler</span>
       </button>
 
-      <!-- Tab 5: Ayarlar -->
       <button data-tab="tab-settings" class="nav-item flex flex-col items-center justify-center py-1 text-slate-400 hover:text-slate-200 font-medium transition group">
         <i class="fa-solid fa-sliders text-base sm:text-lg mb-0.5 group-hover:scale-110 transition"></i>
         <span class="text-[10px] sm:text-[11px]">Ayarlar</span>
       </button>
     </div>
   </nav>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: HIZLI ÖZEL LİSTE OLUŞTURUCU -->
+  <!-- ======================================================== -->
+  <div id="customPlaylistModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-black/80">
+    <div class="bg-darkSurface border border-darkBorder w-full max-w-md rounded-2xl p-5 shadow-2xl animate-scale-up space-y-4">
+      <div class="flex items-center justify-between border-b border-darkBorder pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-bolt text-amber-400"></i>
+          <span>Hızlı Özel Liste Oluştur</span>
+        </h3>
+        <button onclick="AppUI.closeCustomCreatorModal()" class="text-slate-400 hover:text-white text-sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label for="customSubjectSelect" class="block text-xs font-bold text-slate-300 mb-1">Ders Seçimi</label>
+          <select id="customSubjectSelect" class="w-full bg-slate-900 border border-darkBorder rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500"></select>
+        </div>
+
+        <div>
+          <label for="customPlaylistTitleInput" class="block text-xs font-bold text-slate-300 mb-1">Liste / Hoca Başlığı</label>
+          <input type="text" id="customPlaylistTitleInput" placeholder="Örn: 2026 KPSS Tarih - Ramazan Yetgin" 
+                 class="w-full bg-slate-900 border border-darkBorder rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label for="customVideoCountInput" class="block text-xs font-bold text-slate-300 mb-1">Toplam Video Sayısı</label>
+            <input type="number" id="customVideoCountInput" min="1" max="200" value="45" 
+                   class="w-full bg-slate-900 border border-darkBorder rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+          </div>
+          <div>
+            <label for="customDurationInput" class="block text-xs font-bold text-slate-300 mb-1">Ort. Süre (dk)</label>
+            <input type="number" id="customDurationInput" min="5" max="180" value="40" 
+                   class="w-full bg-slate-900 border border-darkBorder rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+
+        <div>
+          <label for="customVideoTitlesTextarea" class="block text-xs font-bold text-slate-300 mb-1">
+            Video Başlıkları (İsteğe Bağlı)
+          </label>
+          <textarea id="customVideoTitlesTextarea" rows="3" placeholder="Her satıra bir konu/video başlığı yapıştırabilirsiniz. Boş bırakırsanız otomatik numaralandırılır." 
+                    class="w-full bg-slate-900 border border-darkBorder rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand-500"></textarea>
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-darkBorder flex gap-2">
+        <button id="saveCustomPlaylistBtn" class="flex-1 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-brand-600/20">
+          Listeyi Oluştur ve Takvime Ekle
+        </button>
+        <button onclick="AppUI.closeCustomCreatorModal()" class="py-2.5 px-4 bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl transition">
+          İptal
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: YOUTUBE BAĞLANTI & API YARDIM MODALI -->
+  <!-- ======================================================== -->
+  <div id="apiHelpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-black/80">
+    <div class="bg-darkSurface border border-darkBorder w-full max-w-lg rounded-2xl p-5 shadow-2xl animate-scale-up space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-darkBorder pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-circle-info text-brand-400"></i>
+          <span>Oynatma Listesi Bağlantı Rehberi</span>
+        </h3>
+        <button onclick="AppUI.closeHelpModal()" class="text-slate-400 hover:text-white text-sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+        <div class="bg-amber-950/30 border border-amber-500/30 rounded-xl p-3">
+          <p class="font-bold text-amber-400 mb-1">
+            <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+            Neden "Failed to fetch" veya Hata Alınır?
+          </p>
+          <p class="text-[11px] text-slate-400">
+            1. <strong>Gizli / Bulunamayan Liste:</strong> YouTube'da silinmiş veya "Gizli" (Private) ayarlı listeler dışarıya veri vermez.<br>
+            2. <strong>CORS Güvenlik Duvarı:</strong> YouTube, tarayıcıların doğrudan oynatma listesi çekmesini engeller.
+          </p>
+        </div>
+
+        <h4 class="font-bold text-white text-xs pt-1">İki Kolay Çözüm:</h4>
+
+        <!-- Solution 1 -->
+        <div class="bg-slate-900 rounded-xl p-3 border border-darkBorder space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-emerald-400">Yöntem 1: Hızlı Özel Liste (Tavsiye Edilen)</span>
+            <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold">10 Saniye</span>
+          </div>
+          <p class="text-[11px] text-slate-400">
+            YouTube API anahtarıyla uğraşmadan video sayısını ve ortalama süreyi girerek listenizi hemen oluşturabilirsiniz:
+          </p>
+          <button onclick="AppUI.closeHelpModal(); AppUI.openCustomCreatorForSubject('egitim-bilimleri')" class="w-full py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl transition">
+            Hızlı Özel Liste Formunu Aç
+          </button>
+        </div>
+
+        <!-- Solution 2 -->
+        <div class="bg-slate-900 rounded-xl p-3 border border-darkBorder space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-brand-400">Yöntem 2: Ücretsiz YouTube API Anahtarı</span>
+            <span class="text-[10px] bg-brand-500/20 text-brand-400 px-2 py-0.5 rounded font-bold">Resmi Çözüm</span>
+          </div>
+          <ol class="list-decimal list-inside text-[11px] text-slate-400 space-y-1">
+            <li><a href="https://console.cloud.google.com/" target="_blank" class="text-brand-400 underline">Google Cloud Console</a>'a Google hesabınızla girin.</li>
+            <li><strong>YouTube Data API v3</strong> servisini aktifleştirin (Ücretsizdir).</li>
+            <li><strong>Credentials ➔ Create API Key</strong> butonuna basıp anahtarınızı kopyalayın.</li>
+            <li>Uygulama Ayarları sayfasına yapıştırıp kaydedin.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-darkBorder text-right">
+        <button onclick="AppUI.closeHelpModal()" class="py-2 px-4 bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl transition">
+          Anladım, Kapat
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- ======================================================== -->
   <!-- MODAL: YOUTUBE VIDEO PLAYER -->

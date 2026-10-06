@@ -6,8 +6,9 @@
  *  - AMOLED Pure Black (#000000) & Light Themes
  *  - Phone & Tablet Layout Modes
  *  - Smart Bin-Packing Scheduling Algorithm (No video split rule)
+ *  - YouTube Data API v3 + Enhanced Multi-CORS Fallbacks
+ *  - Quick Custom Playlist Creator (Instant offline / custom course generation)
  *  - Full LocalStorage persistence
- *  - YouTube Data API v3 & Direct fallback scrapers
  */
 
 // ============================================================================
@@ -126,12 +127,11 @@ const ThemeManager = {
       html.classList.add('theme-light');
       if (metaTheme) metaTheme.setAttribute('content', '#f8fafc');
     } else {
-      // AMOLED Pure Black
+      // AMOLED Pure Black (#000000)
       html.classList.add('theme-amoled', 'dark');
       if (metaTheme) metaTheme.setAttribute('content', '#000000');
     }
 
-    // Update Quick Toggle Button Icon in Header
     const toggleBtn = document.getElementById('quickThemeToggleBtn');
     if (toggleBtn) {
       toggleBtn.innerHTML = theme === 'light'
@@ -140,7 +140,6 @@ const ThemeManager = {
       toggleBtn.title = theme === 'light' ? 'AMOLED Saf Siyaha Geç' : 'Gündüz Moduna Geç';
     }
 
-    // Update Settings Radios / UI buttons
     document.querySelectorAll('.theme-selector-btn').forEach(btn => {
       const btnTheme = btn.getAttribute('data-theme');
       if (btnTheme === theme) {
@@ -154,7 +153,7 @@ const ThemeManager = {
   toggle() {
     const next = this.getTheme() === 'amoled' ? 'light' : 'amoled';
     this.setTheme(next);
-    AppUI.showToast(next === 'amoled' ? 'AMOLED Saf Siyah Açıldı' : 'Gündüz Modu Açıldı', 'info');
+    AppUI.showToast(next === 'amoled' ? 'AMOLED Saf Siyah Açıldı (#000000)' : 'Gündüz Modu Açıldı', 'info');
   }
 };
 
@@ -169,7 +168,6 @@ const LayoutManager = {
   getLayout() {
     const saved = localStorage.getItem(this.KEY);
     if (saved) return saved;
-    // Default to tablet if large screen, else phone
     return window.innerWidth >= 900 ? 'tablet' : 'phone';
   },
 
@@ -188,7 +186,6 @@ const LayoutManager = {
       body.classList.add('view-phone');
     }
 
-    // Update Quick Toggle Button Icon
     const toggleBtn = document.getElementById('quickLayoutToggleBtn');
     if (toggleBtn) {
       toggleBtn.innerHTML = layout === 'tablet'
@@ -197,7 +194,6 @@ const LayoutManager = {
       toggleBtn.title = layout === 'tablet' ? 'Telefon Moduna Geç' : 'Tablet Moduna Geç';
     }
 
-    // Update Settings Layout buttons
     document.querySelectorAll('.layout-selector-btn').forEach(btn => {
       const btnLayout = btn.getAttribute('data-layout');
       if (btnLayout === layout) {
@@ -217,7 +213,7 @@ const LayoutManager = {
 
 
 // ============================================================================
-// 3. STORAGE SERVICE (Ders Bazlı Yerel Depolama)
+// 3. STORAGE SERVICE
 // ============================================================================
 
 const StorageService = {
@@ -233,7 +229,7 @@ const StorageService = {
     if (!raw) {
       return {
         dailyCapacityMinutes: 120,
-        selectedDays: [1, 2, 3, 4, 5], // 1 = Pzt ... 7 = Paz
+        selectedDays: [1, 2, 3, 4, 5],
         startDate: SmartSchedulingEngine.formatLocalDate(new Date()),
         activeSubjectFilter: 'all',
         apiKey: ''
@@ -299,7 +295,6 @@ const StorageService = {
 
   saveVideos(subjectId, videos) {
     let all = this.getVideos();
-    // Remove existing videos for this subject
     all = all.filter(v => v.subjectId !== subjectId);
     all.push(...videos);
     localStorage.setItem(this.KEYS.VIDEOS, JSON.stringify(all));
@@ -337,7 +332,7 @@ const StorageService = {
 
 
 // ============================================================================
-// 4. YOUTUBE SERVICE & AGS/YDS SAMPLE DATA GENERATOR
+// 4. YOUTUBE SERVICE & ENHANCED EXTRACTION
 // ============================================================================
 
 const YouTubeService = {
@@ -386,13 +381,15 @@ const YouTubeService = {
   async fetchPlaylist(input, subjectId, apiKey = '') {
     const playlistId = this.extractPlaylistId(input);
     if (!playlistId) {
-      throw new Error("Geçerli bir YouTube oynatma listesi URL'si veya ID'si bulunamadı.");
+      throw new Error("Geçerli bir YouTube oynatma listesi linki veya ID'si girin.");
     }
 
+    // 1. If user provided a YouTube Data API v3 key, use official endpoint (CORS supported by Google)
     if (apiKey && apiKey.trim().length > 10) {
       return await this.fetchViaOfficialApi(playlistId, subjectId, apiKey.trim());
     }
 
+    // 2. Otherwise try fallback scraper with multiple CORS proxies
     return await this.fetchViaFallbackScraper(playlistId, subjectId);
   },
 
@@ -400,7 +397,11 @@ const YouTubeService = {
     const listRes = await fetch(
       `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${apiKey}`
     );
-    if (!listRes.ok) throw new Error(`YouTube API Hatası (${listRes.status})`);
+    if (!listRes.ok) {
+      if (listRes.status === 404) throw new Error("Oynatma listesi YouTube'da bulunamadı veya gizli.");
+      if (listRes.status === 403) throw new Error("YouTube API kotası aşıldı veya anahtar geçersiz.");
+      throw new Error(`YouTube API Hatası (${listRes.status})`);
+    }
     const listData = await listRes.json();
     if (!listData.items || listData.items.length === 0) {
       throw new Error("Oynatma listesi bulunamadı veya gizli.");
@@ -411,7 +412,7 @@ const YouTubeService = {
     const channelTitle = snippet.channelTitle;
     const thumb = snippet.thumbnails?.high?.url || snippet.thumbnails?.medium?.url || '';
 
-    // Fetch Videos
+    // Fetch Videos (up to 50 items)
     const itemsRes = await fetch(
       `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=50&playlistId=${playlistId}&key=${apiKey}`
     );
@@ -468,27 +469,43 @@ const YouTubeService = {
   },
 
   async fetchViaFallbackScraper(playlistId, subjectId) {
-    const endpoints = [
-      `https://pipedapi.kavin.rocks/playlists/${playlistId}`,
-      `https://api.invidious.io/api/v1/playlists/${playlistId}`
+    // Multi-tier endpoints with CORS proxies to bypass browser blocking
+    const targetApis = [
+      `https://inv.nadeko.net/api/v1/playlists/${playlistId}`,
+      `https://invidious.nerdvpn.de/api/v1/playlists/${playlistId}`,
+      `https://iv.ggtyler.dev/api/v1/playlists/${playlistId}`
     ];
 
-    let lastError = null;
-    for (const ep of endpoints) {
+    const proxyUrls = [];
+    targetApis.forEach(api => {
+      proxyUrls.push(api); // Direct
+      proxyUrls.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(api)}`); // CORS Proxy 1
+      proxyUrls.push(`https://corsproxy.io/?url=${encodeURIComponent(api)}`); // CORS Proxy 2
+    });
+
+    for (const url of proxyUrls) {
       try {
-        const res = await fetch(ep, { headers: { 'Accept': 'application/json' } });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000); // 4s timeout
+
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' }
+        });
+        clearTimeout(timeoutId);
+
         if (res.ok) {
           const data = await res.json();
-          const title = data.name || data.title || "YouTube Oynatma Listesi";
-          const channel = data.uploader || data.author || "Eğitim Kanalı";
-          const thumb = data.thumbnailUrl || (data.videos?.[0]?.thumbnail) || "";
+          const title = data.title || data.name || "YouTube Oynatma Listesi";
+          const channel = data.author || data.uploader || "Eğitim Kanalı";
+          const thumb = data.playlistThumbnail || (data.videos?.[0]?.videoThumbnails?.[0]?.url) || "";
 
-          const rawList = data.relatedStreams || data.videos || [];
+          const rawList = data.videos || data.relatedStreams || [];
           if (rawList.length > 0) {
             const videos = rawList.map((item, idx) => {
-              const vid = item.url ? item.url.replace('/watch?v=', '') : (item.videoId || `vid_${idx}`);
+              const vid = item.videoId || (item.url ? item.url.replace('/watch?v=', '') : `vid_${idx}`);
               const vTitle = item.title || `Ders #${idx + 1}`;
-              const dur = Math.max(item.duration || 1800, 300);
+              const dur = Math.max(item.lengthSeconds || item.duration || 1800, 300);
 
               return {
                 id: vid,
@@ -519,11 +536,14 @@ const YouTubeService = {
           }
         }
       } catch (err) {
-        lastError = err;
+        // Try next fallback
       }
     }
 
-    throw lastError || new Error("Oynatma listesi yüklenemedi. İnternet bağlantınızı kontrol edin veya geçerli bir liste girin.");
+    // If all fail, throw an informative error explaining why
+    throw new Error(
+      "YouTube doğrudan veri çekilmesini engelledi (CORS Koruması) veya bu oynatma listesi YouTube'da bulunamadı/gizli."
+    );
   },
 
   extractTopic(videoTitle) {
@@ -536,12 +556,56 @@ const YouTubeService = {
   },
 
   /**
-   * AGS + YDS Tam Müfredat Örnek Paketi
-   * Kullanıcı tek tıkla 7 dersin tümünü gerçekçi ve zengin içerikle doldurabilir.
+   * Manuel / Hızlı Ders & Video Üretici
+   * Kullanıcı YouTube linkiyle uğraşmadan dilediği ders için saniyeler içinde özel liste kurabilir!
+   */
+  createCustomPlaylist(subjectId, title, count, averageDurationMinutes, videoTitles = []) {
+    const pId = `custom_${subjectId}_${Date.now()}`;
+    const targetSubject = SUBJECTS.find(s => s.id === subjectId) || SUBJECTS[0];
+    const durationSeconds = Math.max(10, averageDurationMinutes) * 60;
+
+    const videos = [];
+    const videoCount = Math.max(1, count);
+
+    for (let i = 0; i < videoCount; i++) {
+      const vTitle = (videoTitles && videoTitles[i])
+        ? videoTitles[i].trim()
+        : `${targetSubject.shortName} #${i + 1} - Konu Anlatımı & Soru Çözümü`;
+
+      videos.push({
+        id: `custom_vid_${subjectId}_${i + 1}`,
+        playlistId: pId,
+        subjectId,
+        title: vTitle,
+        durationSeconds: durationSeconds,
+        position: i,
+        topic: this.extractTopic(vTitle),
+        thumbnailUrl: `https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=300&q=80`,
+        isCompleted: false
+      });
+    }
+
+    const totalDur = videos.reduce((acc, v) => acc + v.durationSeconds, 0);
+
+    return {
+      playlist: {
+        id: pId,
+        subjectId,
+        title: title || `${targetSubject.name} Özel Çalışma Serisi`,
+        channelTitle: 'Öğretmen Çalışma Masası',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=400&q=80',
+        itemCount: videos.length,
+        totalDurationSeconds: totalDur
+      },
+      videos
+    };
+  },
+
+  /**
+   * AGS + YDS Tam Müfredat Örnek Paketi (53 Video)
    */
   getFullAgsAndYdsCurriculum() {
     const curricula = [
-      // 1. EĞİTİM BİLİMLERİ (AGS %37.5)
       {
         subjectId: 'egitim-bilimleri',
         playlistTitle: 'AGS 2026 - Eğitim Bilimleri & Millî Eğitim Sistemi Kapsamlı Set',
@@ -560,7 +624,6 @@ const YouTubeService = {
           ["Türk Millî Eğitim Sistemi ve Teşkilat Yapısı - Bakanlık Vizyonu", 2400, "MEB Sistemi"]
         ]
       },
-      // 2. SÖZEL YETENEK (TÜRKÇE - AGS %18.75)
       {
         subjectId: 'turkce',
         playlistTitle: 'AGS 2026 - Sözel Yetenek & Paragraf Taktikleri',
@@ -577,7 +640,6 @@ const YouTubeService = {
           ["Sözel Mantık - Tablo Oluşturma ve Kesin Çıkarım", 2700, "Sözel Mantık"]
         ]
       },
-      // 3. SAYISAL YETENEK (MATEMATİK - AGS %18.75)
       {
         subjectId: 'matematik',
         playlistTitle: 'AGS 2026 - Sayısal Yetenek & Problem Çözümleri',
@@ -594,7 +656,6 @@ const YouTubeService = {
           ["Tablo, Grafik Yorumlama ve Sayısal Mantık", 2700, "Sayısal Mantık"]
         ]
       },
-      // 4. EĞİTİM MEVZUATI (AGS %10)
       {
         subjectId: 'mevzuat',
         playlistTitle: 'AGS 2026 - Eğitim Mevzuatı & Hukuk Tam Seri',
@@ -609,7 +670,6 @@ const YouTubeService = {
           ["Cumhurbaşkanlığı Kararnamesi 1 Nolu - MEB Teşkilatı", 2100, "1 Nolu CBK"]
         ]
       },
-      // 5. TARİH (AGS %7.5)
       {
         subjectId: 'tarih',
         playlistTitle: 'AGS 2026 - Tarih Konu Anlatımı & Kronoloji',
@@ -625,7 +685,6 @@ const YouTubeService = {
           ["Atatürk İlke ve İnkılapları & Çağdaş Türk Tarihi", 2400, "İnkılap Tarihi"]
         ]
       },
-      // 6. TÜRKİYE COĞRAFYASI (AGS %7.5)
       {
         subjectId: 'cografya',
         playlistTitle: 'AGS 2026 - Haritalarla Türkiye Coğrafyası',
@@ -640,7 +699,6 @@ const YouTubeService = {
           ["Madenler, Enerji Kaynakları, Sanayi ve Ulaşım", 2400, "Ekonomik Coğrafya"]
         ]
       },
-      // 7. YDS (İNGİLİZCE - TEK DERS)
       {
         subjectId: 'yds',
         playlistTitle: 'YDS İngilizce - Sınav Stratejileri & Master Plan',
@@ -697,17 +755,10 @@ const YouTubeService = {
 
 
 // ============================================================================
-// 5. SMART SCHEDULING ENGINE (Akıllı Programlama Motoru)
+// 5. SMART SCHEDULING ENGINE
 // ============================================================================
 
 const SmartSchedulingEngine = {
-  /**
-   * Bin-Packing with Sequencing Algorithm
-   * Kural 1: Pedagojik ders sırasını korur
-   * Kural 2: Günlük çalışma kapasitesini aşmaz
-   * Kural 3: KESİNLİKLE VİDEO BÖLÜNMEZ kuralı (tek video kapasiteyi tek başına aşmadığı sürece)
-   * Kural 4: Kullanıcının belirlediği haftalık günlere planlar
-   */
   generateSchedule(videos, dailyCapacityMinutes, selectedDays, startDateStr) {
     if (!videos || videos.length === 0) return [];
 
@@ -720,7 +771,6 @@ const SmartSchedulingEngine = {
     const queue = [...videos];
 
     while (queue.length > 0) {
-      // Advance to next active study day
       let currentIsoDay = this.getIsoDay(currentDate);
       while (!activeDaysSet.has(currentIsoDay)) {
         currentDate.setDate(currentDate.getDate() + 1);
@@ -738,7 +788,6 @@ const SmartSchedulingEngine = {
         const vDuration = nextVideo.durationSeconds;
 
         if (assignedVideoIds.length === 0) {
-          // Günün ilk videosu: Kapasiteden uzun olsa dahi bölünmeden bu güne yerleştirilir
           queue.shift();
           assignedVideoIds.push(nextVideo.id);
           accumulatedSeconds += vDuration;
@@ -747,13 +796,11 @@ const SmartSchedulingEngine = {
             break;
           }
         } else {
-          // Sonraki videolar: Kalan kapasiteye sığıyorsa ekle
           if (accumulatedSeconds + vDuration <= capacitySeconds) {
             queue.shift();
             assignedVideoIds.push(nextVideo.id);
             accumulatedSeconds += vDuration;
           } else {
-            // Sığmıyorsa: Kural gereği video bölünmez! Gün kapatılır.
             break;
           }
         }
@@ -769,7 +816,6 @@ const SmartSchedulingEngine = {
         });
       }
 
-      // Takvim gününü 1 gün ilerlet
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
@@ -777,7 +823,7 @@ const SmartSchedulingEngine = {
   },
 
   getIsoDay(date) {
-    const day = date.getDay(); // 0 Pazar, 1 Pazartesi
+    const day = date.getDay();
     return day === 0 ? 7 : day;
   },
 
@@ -854,7 +900,6 @@ const AppUI = {
   },
 
   bindEvents() {
-    // Quick Theme & Layout toggles in Header
     document.getElementById('quickThemeToggleBtn')?.addEventListener('click', () => {
       ThemeManager.toggle();
     });
@@ -863,7 +908,6 @@ const AppUI = {
       LayoutManager.toggle();
     });
 
-    // Nav bar items
     document.querySelectorAll('.nav-item').forEach(btn => {
       btn.addEventListener('click', () => {
         const target = btn.getAttribute('data-tab');
@@ -871,7 +915,6 @@ const AppUI = {
       });
     });
 
-    // Capacity Range Slider
     const range = document.getElementById('capacityRange');
     range?.addEventListener('input', (e) => {
       const val = parseInt(e.target.value, 10);
@@ -881,7 +924,6 @@ const AppUI = {
       StorageService.saveSettings(settings);
     });
 
-    // Day picker buttons
     document.querySelectorAll('.day-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const day = parseInt(btn.getAttribute('data-day'), 10);
@@ -889,19 +931,17 @@ const AppUI = {
       });
     });
 
-    // Start date input
     document.getElementById('startDateInput')?.addEventListener('change', (e) => {
       const settings = StorageService.getSettings();
       settings.startDate = e.target.value;
       StorageService.saveSettings(settings);
     });
 
-    // Generate Schedule button
     document.getElementById('generateScheduleBtn')?.addEventListener('click', () => {
       this.handleGenerateSchedule();
     });
 
-    // Import Playlist Button & Paste
+    // Import YouTube Playlist
     document.getElementById('importPlaylistBtn')?.addEventListener('click', () => {
       this.handleImportPlaylist();
     });
@@ -919,6 +959,11 @@ const AppUI = {
       }
     });
 
+    // Custom Quick Playlist Generator Form submit
+    document.getElementById('saveCustomPlaylistBtn')?.addEventListener('click', () => {
+      this.handleCreateCustomPlaylist();
+    });
+
     // Load Sample Full Curriculum Buttons
     document.getElementById('loadSampleCurriculumBtn')?.addEventListener('click', () => {
       this.handleLoadFullCurriculum();
@@ -928,7 +973,7 @@ const AppUI = {
       this.handleLoadFullCurriculum();
     });
 
-    // Settings Theme / Layout Buttons
+    // Theme & Layout Selectors in Settings
     document.querySelectorAll('.theme-selector-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const th = btn.getAttribute('data-theme');
@@ -949,7 +994,8 @@ const AppUI = {
       const settings = StorageService.getSettings();
       settings.apiKey = input ? input.value.trim() : '';
       StorageService.saveSettings(settings);
-      this.showToast('API Anahtarı kaydedildi!', 'success');
+      this.showToast('YouTube API Anahtarı başarıyla kaydedildi!', 'success');
+      this.closeHelpModal();
     });
 
     document.getElementById('resetAllDataBtn')?.addEventListener('click', () => {
@@ -958,11 +1004,6 @@ const AppUI = {
         this.showToast('Tüm veriler sıfırlandı.', 'info');
         this.render();
       }
-    });
-
-    // Video search in Courses tab
-    document.getElementById('searchVideoInput')?.addEventListener('input', (e) => {
-      this.filterVideosList(e.target.value.toLowerCase());
     });
   },
 
@@ -977,7 +1018,6 @@ const AppUI = {
       activeEl.classList.remove('hidden');
     }
 
-    // Update bottom nav active style
     document.querySelectorAll('.nav-item').forEach(btn => {
       const isTarget = btn.getAttribute('data-tab') === tabId;
       if (isTarget) {
@@ -989,7 +1029,6 @@ const AppUI = {
       }
     });
 
-    // Scroll top
     window.scrollTo({ top: 0, behavior: 'smooth' });
     this.render();
   },
@@ -997,31 +1036,29 @@ const AppUI = {
   initSettingsValues() {
     const settings = StorageService.getSettings();
 
-    // Capacity range
     const range = document.getElementById('capacityRange');
     if (range) range.value = settings.dailyCapacityMinutes;
     this.updateCapacityDisplay(settings.dailyCapacityMinutes);
 
-    // Days
     this.renderDayPickers(settings.selectedDays);
 
-    // Start date
     const dateInput = document.getElementById('startDateInput');
     if (dateInput) {
       dateInput.value = settings.startDate || SmartSchedulingEngine.formatLocalDate(new Date());
     }
 
-    // API key
     const apiInput = document.getElementById('apiKeyInput');
     if (apiInput) apiInput.value = settings.apiKey || '';
 
-    // Render Subject Select options in Playlist Import Card
     const subjectSelect = document.getElementById('playlistSubjectSelect');
-    if (subjectSelect) {
-      subjectSelect.innerHTML = SUBJECTS.map(s => `
-        <option value="${s.id}">${s.name} [${s.badge}]</option>
-      `).join('');
-    }
+    const customSubjectSelect = document.getElementById('customSubjectSelect');
+
+    const optionsHtml = SUBJECTS.map(s => `
+      <option value="${s.id}">${s.name} [${s.badge}]</option>
+    `).join('');
+
+    if (subjectSelect) subjectSelect.innerHTML = optionsHtml;
+    if (customSubjectSelect) customSubjectSelect.innerHTML = optionsHtml;
   },
 
   updateCapacityDisplay(minutes) {
@@ -1193,7 +1230,6 @@ const AppUI = {
       return;
     }
 
-    // Find schedule for today
     const todaySchedule = allSchedules.find(s => s.date === todayStr);
 
     if (!todaySchedule || !todaySchedule.videoIds || todaySchedule.videoIds.length === 0) {
@@ -1210,12 +1246,10 @@ const AppUI = {
 
     if (emptyState) emptyState.classList.add('hidden');
 
-    // Retrieve today's videos
     let todayVideos = todaySchedule.videoIds
       .map(vId => allVideos.find(v => v.id === vId))
       .filter(Boolean);
 
-    // Filter by subject if chosen
     const displayVideos = filterId === 'all'
       ? todayVideos
       : todayVideos.filter(v => v.subjectId === filterId);
@@ -1231,7 +1265,6 @@ const AppUI = {
       return;
     }
 
-    // Render Lesson Cards
     listContainer.innerHTML = displayVideos.map(video => {
       const subject = SUBJECTS.find(s => s.id === video.subjectId) || {
         name: 'Ders', icon: 'fa-book', color: '#6366f1', badge: 'AGS'
@@ -1241,7 +1274,6 @@ const AppUI = {
 
       return `
         <div class="bg-darkSurface border border-darkBorder hover:border-brand-500/40 rounded-2xl p-3.5 transition shadow-md flex items-center gap-3 group">
-          <!-- Checkbox -->
           <label class="cursor-pointer relative flex items-center justify-center shrink-0">
             <input type="checkbox" ${isDone ? 'checked' : ''} 
                    onchange="AppUI.toggleVideo('${video.id}', this.checked)"
@@ -1251,7 +1283,6 @@ const AppUI = {
             </div>
           </label>
 
-          <!-- Thumbnail with play button -->
           <div class="relative w-16 h-12 rounded-xl overflow-hidden shrink-0 bg-slate-800 cursor-pointer" onclick="AppUI.openVideoModal('${video.id}', '${video.title.replace(/'/g, "\\'")}')">
             <img src="${video.thumbnailUrl}" alt="Thumb" class="w-full h-full object-cover">
             <div class="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition">
@@ -1259,7 +1290,6 @@ const AppUI = {
             </div>
           </div>
 
-          <!-- Video Details -->
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1.5 mb-0.5">
               <span class="subject-badge" style="background-color: ${subject.color}25; color: ${subject.color}; border: 1px solid ${subject.color}40">
@@ -1328,7 +1358,6 @@ const AppUI = {
     StorageService.toggleVideoCompletion(videoId, isCompleted);
     if (isCompleted) {
       this.showToast('Tebrikler! Ders tamamlandı.', 'success');
-      // Trigger confetti if all today is done
       const todaySchedule = StorageService.getSchedules().find(
         s => s.date === SmartSchedulingEngine.formatLocalDate(new Date())
       );
@@ -1374,7 +1403,7 @@ const AppUI = {
           <i class="fa-regular fa-calendar-xmark text-4xl text-slate-500 mb-3"></i>
           <h4 class="text-sm font-bold text-slate-200 mb-1">Henüz Program Oluşturulmadı</h4>
           <p class="text-xs text-slate-400 mb-4 max-w-xs mx-auto">
-            Yukarıdaki panelden günlük çalışma kapasitenizi ve günleri belirleyip "Akıllı Programı Oluştur" butonuna basın.
+            Kapasitenizi belirleyin veya hazır ders paketini yükleyip takviminizi oluşturun.
           </p>
           <button onclick="AppUI.handleGenerateSchedule()" class="py-2.5 px-4 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl transition">
             <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>
@@ -1385,7 +1414,6 @@ const AppUI = {
       return;
     }
 
-    // Schedule Summary Metrics
     if (summaryCard) {
       summaryCard.classList.remove('hidden');
       const totalSec = schedules.reduce((acc, s) => acc + s.totalAssignedSeconds, 0);
@@ -1410,7 +1438,7 @@ const AppUI = {
         : dayVideos.filter(v => v.subjectId === filterId);
 
       if (filteredDayVideos.length === 0 && filterId !== 'all') {
-        return ''; // Don't show empty day cards when filtered
+        return '';
       }
 
       const completedCount = filteredDayVideos.filter(v => v.isCompleted).length;
@@ -1421,7 +1449,6 @@ const AppUI = {
 
       return `
         <div class="bg-darkSurface border ${isToday ? 'border-brand-500 shadow-brand-500/10' : 'border-darkBorder'} rounded-2xl p-4 shadow-lg space-y-3">
-          <!-- Day Header -->
           <div class="flex items-center justify-between pb-2 border-b border-darkBorder">
             <div class="flex items-center gap-2">
               <span class="w-7 h-7 rounded-xl ${isToday ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'} flex items-center justify-center font-bold text-xs">
@@ -1441,7 +1468,6 @@ const AppUI = {
             </span>
           </div>
 
-          <!-- Day's Videos List -->
           <div class="space-y-2">
             ${filteredDayVideos.map(video => {
               const subj = SUBJECTS.find(s => s.id === video.subjectId) || { name: 'Ders', color: '#6366f1', icon: 'fa-book' };
@@ -1470,7 +1496,7 @@ const AppUI = {
   },
 
   // ==========================================================================
-  // TAB 3: İLERLEME (PROGRESS & SUBJECT ANALYTICS)
+  // TAB 3: İLERLEME (PROGRESS & ANALYTICS)
   // ==========================================================================
   renderProgressView() {
     const allVideos = StorageService.getVideos();
@@ -1514,7 +1540,6 @@ const AppUI = {
     if (totDurLabel) totDurLabel.textContent = YouTubeService.formatDuration(totalSeconds);
     if (subtitle) subtitle.textContent = `Toplam ${SUBJECTS.length} Ders • ${totalCount} Video`;
 
-    // Render Progress per Subject (AGS 6 ders + YDS 1 ders)
     if (container) {
       container.innerHTML = SUBJECTS.map(subject => {
         const subVideos = allVideos.filter(v => v.subjectId === subject.id);
@@ -1544,7 +1569,6 @@ const AppUI = {
 
         const subDone = subVideos.filter(v => v.isCompleted).length;
         const subPct = Math.round((subDone / subTotal) * 100);
-        const subDuration = subVideos.reduce((acc, v) => acc + v.durationSeconds, 0);
         const subRemDur = subVideos.filter(v => !v.isCompleted).reduce((acc, v) => acc + v.durationSeconds, 0);
 
         return `
@@ -1569,7 +1593,6 @@ const AppUI = {
               <span class="text-base font-black" style="color: ${subject.color}">%${subPct}</span>
             </div>
 
-            <!-- Progress Bar -->
             <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
               <div class="h-full rounded-full transition-all duration-500" style="width: ${subPct}%; background-color: ${subject.color}"></div>
             </div>
@@ -1580,7 +1603,7 @@ const AppUI = {
   },
 
   // ==========================================================================
-  // TAB 4: DERSLER & OYNATMA LİSTELERİ (SUBJECTS & PLAYLIST MANAGEMENT)
+  // TAB 4: DERSLER & OYNATMA LİSTELERİ
   // ==========================================================================
   renderSubjectsView() {
     const container = document.getElementById('subjectsGridContainer');
@@ -1599,7 +1622,6 @@ const AppUI = {
 
       return `
         <div class="bg-darkSurface border border-darkBorder hover:border-brand-500/40 rounded-2xl p-4 shadow-xl transition space-y-3">
-          <!-- Card Header -->
           <div class="flex items-start justify-between">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0 shadow-md"
@@ -1616,7 +1638,6 @@ const AppUI = {
             </div>
           </div>
 
-          <!-- Content Status -->
           ${hasContent ? `
             <div class="bg-slate-900/80 rounded-xl p-3 border border-darkBorder/60 flex items-center justify-between text-xs">
               <div>
@@ -1632,16 +1653,22 @@ const AppUI = {
             </div>
           ` : `
             <div class="bg-slate-900/40 rounded-xl p-3 border border-dashed border-darkBorder/80 text-center">
-              <p class="text-xs text-slate-400">Henüz YouTube listesi bağlanmadı</p>
+              <p class="text-xs text-slate-400">Henüz ders listesi bağlanmadı</p>
             </div>
           `}
 
-          <!-- Action Button -->
-          <button onclick="AppUI.openAddPlaylistForSubject('${subject.id}')"
-                  class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-darkBorder text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5">
-            <i class="fa-brands fa-youtube text-red-500"></i>
-            <span>${hasContent ? 'Oynatma Listesini Değiştir / Güncelle' : 'YouTube Oynatma Listesi Ekle'}</span>
-          </button>
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button onclick="AppUI.openAddPlaylistForSubject('${subject.id}')"
+                    class="py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-darkBorder text-[11px] font-semibold rounded-xl transition flex items-center justify-center gap-1">
+              <i class="fa-brands fa-youtube text-red-500"></i>
+              <span>YouTube Bağla</span>
+            </button>
+            <button onclick="AppUI.openCustomCreatorForSubject('${subject.id}')"
+                    class="py-2 bg-brand-600/20 hover:bg-brand-600/30 text-brand-300 border border-brand-500/30 text-[11px] font-semibold rounded-xl transition flex items-center justify-center gap-1">
+              <i class="fa-solid fa-bolt text-amber-400"></i>
+              <span>Özel Liste Kur</span>
+            </button>
+          </div>
         </div>
       `;
     }).join('');
@@ -1651,12 +1678,40 @@ const AppUI = {
     const select = document.getElementById('playlistSubjectSelect');
     if (select) select.value = subjectId;
 
-    // Scroll to import card
     const importCard = document.getElementById('playlistImportCard');
     if (importCard) {
       importCard.scrollIntoView({ behavior: 'smooth' });
       document.getElementById('playlistUrlInput')?.focus();
     }
+  },
+
+  openCustomCreatorForSubject(subjectId) {
+    const select = document.getElementById('customSubjectSelect');
+    if (select) select.value = subjectId;
+
+    const targetSubject = SUBJECTS.find(s => s.id === subjectId);
+    const titleInput = document.getElementById('customPlaylistTitleInput');
+    if (titleInput && targetSubject) {
+      titleInput.value = `${targetSubject.shortName} - 2026 Konu Anlatımı`;
+    }
+
+    const modal = document.getElementById('customPlaylistModal');
+    if (modal) modal.classList.remove('hidden');
+  },
+
+  closeCustomCreatorModal() {
+    const modal = document.getElementById('customPlaylistModal');
+    if (modal) modal.classList.add('hidden');
+  },
+
+  openHelpModal() {
+    const modal = document.getElementById('apiHelpModal');
+    if (modal) modal.classList.remove('hidden');
+  },
+
+  closeHelpModal() {
+    const modal = document.getElementById('apiHelpModal');
+    if (modal) modal.classList.add('hidden');
   },
 
   // ==========================================================================
@@ -1667,7 +1722,7 @@ const AppUI = {
     LayoutManager.applyLayout(LayoutManager.getLayout());
   },
 
-  // Import Playlist Handler
+  // Import YouTube Playlist
   async handleImportPlaylist() {
     const input = document.getElementById('playlistUrlInput');
     const select = document.getElementById('playlistSubjectSelect');
@@ -1691,7 +1746,6 @@ const AppUI = {
       StorageService.savePlaylist(result.playlist);
       StorageService.saveVideos(subjectId, result.videos);
 
-      // Auto reschedule all videos
       const allVideos = StorageService.getVideos();
       const schedules = SmartSchedulingEngine.generateSchedule(
         allVideos,
@@ -1702,28 +1756,71 @@ const AppUI = {
       StorageService.saveSchedules(schedules);
 
       const targetSubject = SUBJECTS.find(s => s.id === subjectId);
-      this.showToast(`"${targetSubject?.name}" için ${result.videos.length} video eklendi!`, 'success');
+      this.showToast(`"${targetSubject?.name}" için ${result.videos.length} video bağlandı!`, 'success');
       input.value = '';
       this.switchTab('tab-today');
     } catch (err) {
+      console.warn("Import playlist error:", err);
       this.showToast(err.message || 'Oynatma listesi yüklenemedi.', 'error');
+      // Automatically open solution guidance modal
+      this.openHelpModal();
     } finally {
       btn.disabled = false;
       btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-down mr-1.5"></i><span>Listeyi Derse Bağla</span>`;
     }
   },
 
+  // Create Custom Playlist Handler
+  handleCreateCustomPlaylist() {
+    const subjectSelect = document.getElementById('customSubjectSelect');
+    const titleInput = document.getElementById('customPlaylistTitleInput');
+    const countInput = document.getElementById('customVideoCountInput');
+    const durationInput = document.getElementById('customDurationInput');
+    const textarea = document.getElementById('customVideoTitlesTextarea');
+
+    const subjectId = subjectSelect?.value || 'egitim-bilimleri';
+    const title = titleInput?.value.trim() || 'Özel Çalışma Serisi';
+    const count = parseInt(countInput?.value || '30', 10);
+    const duration = parseInt(durationInput?.value || '35', 10);
+
+    const rawTitles = textarea?.value ? textarea.value.split('\n').filter(t => t.trim().length > 0) : [];
+
+    const custom = YouTubeService.createCustomPlaylist(
+      subjectId,
+      title,
+      rawTitles.length > 0 ? rawTitles.length : count,
+      duration,
+      rawTitles
+    );
+
+    StorageService.savePlaylist(custom.playlist);
+    StorageService.saveVideos(subjectId, custom.videos);
+
+    const settings = StorageService.getSettings();
+    const allVideos = StorageService.getVideos();
+    const schedules = SmartSchedulingEngine.generateSchedule(
+      allVideos,
+      settings.dailyCapacityMinutes,
+      settings.selectedDays,
+      settings.startDate
+    );
+    StorageService.saveSchedules(schedules);
+
+    const targetSubject = SUBJECTS.find(s => s.id === subjectId);
+    this.showToast(`"${targetSubject?.name}" için ${custom.videos.length} derslik özel program hazırlandı!`, 'success');
+
+    this.closeCustomCreatorModal();
+    this.closeHelpModal();
+    this.switchTab('tab-today');
+  },
+
   // Load Full AGS + YDS Curriculum
   handleLoadFullCurriculum() {
     const full = YouTubeService.getFullAgsAndYdsCurriculum();
 
-    // Save all playlists
     full.playlists.forEach(pl => StorageService.savePlaylist(pl));
-
-    // Save all videos in bulk
     localStorage.setItem(StorageService.KEYS.VIDEOS, JSON.stringify(full.videos));
 
-    // Generate schedule
     const settings = StorageService.getSettings();
     const schedules = SmartSchedulingEngine.generateSchedule(
       full.videos,
@@ -1737,7 +1834,7 @@ const AppUI = {
     this.switchTab('tab-today');
   },
 
-  // Generate / Regenerate Schedule
+  // Generate Schedule
   handleGenerateSchedule() {
     const videos = StorageService.getVideos();
     if (videos.length === 0) {
@@ -1767,7 +1864,11 @@ const AppUI = {
 
     if (modal && iframe) {
       if (modalTitle) modalTitle.textContent = title;
-      iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+      if (videoId.startsWith('custom_vid_') || videoId.startsWith('demo_')) {
+        iframe.src = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(title)}`;
+      } else {
+        iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+      }
       modal.classList.remove('hidden');
     }
   },
@@ -1808,7 +1909,7 @@ const AppUI = {
     setTimeout(() => {
       toast.classList.add('opacity-0', 'transition-opacity');
       setTimeout(() => toast.remove(), 300);
-    }, 3200);
+    }, 3800);
   }
 };
 
@@ -1819,7 +1920,7 @@ if (typeof document !== 'undefined') {
   });
 }
 
-// Export for Node/test environments
+// Export for Node/tests
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { SUBJECTS, ThemeManager, LayoutManager, StorageService, YouTubeService, SmartSchedulingEngine, AppUI };
 }
