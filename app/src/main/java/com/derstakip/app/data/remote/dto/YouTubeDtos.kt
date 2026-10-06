@@ -244,6 +244,12 @@ data class ThumbnailsDto(
     @SerializedName("maxres")
     val maxres: ThumbnailDetailsDto? = null
 ) {
+    val defaultThumb: ThumbnailDetailsDto? get() = defaultThumbnail
+    val mediumThumb: ThumbnailDetailsDto? get() = medium
+    val highThumb: ThumbnailDetailsDto? get() = high
+    val standardThumb: ThumbnailDetailsDto? get() = standard
+    val maxresThumb: ThumbnailDetailsDto? get() = maxres
+
     /**
      * Resolves the best available thumbnail URL, prioritising higher resolution.
      */

@@ -202,8 +202,8 @@ class PlaylistRepositoryImpl @Inject constructor(
             val title = playlistItem.snippet?.title ?: "YouTube Oynatma Listesi"
             val description = playlistItem.snippet?.description ?: ""
             val channelTitle = playlistItem.snippet?.channelTitle ?: "YouTube Kanalı"
-            val thumb = playlistItem.snippet?.thumbnails?.mediumThumb?.url
-                ?: playlistItem.snippet?.thumbnails?.defaultThumb?.url ?: ""
+            val thumb = playlistItem.snippet?.thumbnails?.bestUrl
+                ?: "https://img.youtube.com/vi/${playlistId}/hqdefault.jpg"
 
             // Fetch videos with pagination
             val allVideoEntities = mutableListOf<VideoEntity>()
@@ -235,7 +235,8 @@ class PlaylistRepositoryImpl @Inject constructor(
                         val isoDuration = durationMap[vid] ?: "PT15M"
                         val durationSec = IsoDurationParser.parseToSeconds(isoDuration).let { if (it <= 0L) 900L else it }
                         val topic = TopicExtractor.extractTopic(videoTitle, title)
-                        val vThumb = item.snippet?.thumbnails?.mediumThumb?.url ?: ""
+                        val vThumb = item.snippet?.thumbnails?.bestUrl
+                            ?: "https://img.youtube.com/vi/$vid/hqdefault.jpg"
 
                         allVideoEntities.add(
                             VideoEntity(
